@@ -11,10 +11,10 @@
     :root {
       --bg: #ffffff;
       --bg-secondary: #f5f5f3;
-      --bg-tertiary: #eeede9;
+      --bg-tertiary: #eceae4;
       --text: #1a1a18;
       --text-secondary: #6b6b67;
-      --border: rgba(0,0,0,0.12);
+      --border: rgba(0,0,0,0.11);
       --border-mid: rgba(0,0,0,0.2);
       --radius-md: 8px;
       --radius-lg: 12px;
@@ -32,12 +32,12 @@
     @media (prefers-color-scheme: dark) {
       :root {
         --bg: #1e1e1c;
-        --bg-secondary: #2a2a28;
-        --bg-tertiary: #232321;
+        --bg-secondary: #272725;
+        --bg-tertiary: #1a1a18;
         --text: #f0ede6;
         --text-secondary: #9a9a94;
-        --border: rgba(255,255,255,0.12);
-        --border-mid: rgba(255,255,255,0.22);
+        --border: rgba(255,255,255,0.1);
+        --border-mid: rgba(255,255,255,0.2);
         --green-bg: #04342C;
         --green-text: #9FE1CB;
         --green-border: #1D9E75;
@@ -55,31 +55,14 @@
       background: var(--bg-tertiary);
       color: var(--text);
       min-height: 100vh;
-      padding: 2rem 1rem;
+      padding: 2.5rem 1rem;
     }
 
-    .page {
-      max-width: 960px;
-      margin: 0 auto;
-    }
+    .page { max-width: 1100px; margin: 0 auto; }
 
-    header {
-      margin-bottom: 2rem;
-    }
-
-    header h1 {
-      font-size: 1.75rem;
-      font-weight: normal;
-      letter-spacing: -0.02em;
-      color: var(--text);
-      margin-bottom: 0.25rem;
-    }
-
-    header p {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      font-style: italic;
-    }
+    header { margin-bottom: 2rem; }
+    header h1 { font-size: 1.8rem; font-weight: normal; letter-spacing: -0.02em; margin-bottom: 0.3rem; }
+    header p { font-size: 0.88rem; color: var(--text-secondary); font-style: italic; }
 
     .card {
       background: var(--bg);
@@ -90,415 +73,479 @@
     }
 
     .card-title {
-      font-size: 0.75rem;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--text-secondary);
-      margin-bottom: 1rem;
-      font-family: 'Arial', sans-serif;
+      font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-secondary);
+      margin-bottom: 1rem; font-family: sans-serif;
     }
 
-    .upload-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    @media (max-width: 600px) {
-      .upload-grid { grid-template-columns: 1fr; }
-    }
+    .upload-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 620px) { .upload-grid { grid-template-columns: 1fr; } }
 
     .drop-zone {
-      border: 1.5px dashed var(--border-mid);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem 1rem;
-      text-align: center;
-      cursor: pointer;
+      border: 1.5px dashed var(--border-mid); border-radius: var(--radius-lg);
+      padding: 1.25rem 1rem; text-align: center; cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
-      min-height: 130px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+      min-height: 145px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 4px;
     }
-
     .drop-zone:hover { background: var(--bg-secondary); }
+    .drop-zone.loaded { border-style: solid; border-color: var(--green-border); background: var(--green-bg); }
 
-    .drop-zone.loaded {
-      border-style: solid;
-      border-color: var(--green-border);
-      background: var(--green-bg);
-    }
-
-    .dz-icon { font-size: 20px; }
-    .dz-file-num { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-family: sans-serif; }
-    .dz-label { font-size: 12px; color: var(--text-secondary); line-height: 1.45; font-family: sans-serif; }
-    .dz-filename { font-size: 11px; font-weight: bold; color: #0F6E56; margin-top: 2px; font-family: sans-serif; word-break: break-all; }
+    .dz-icon { font-size: 20px; margin-bottom: 2px; }
+    .dz-num { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); font-family: sans-serif; }
+    .dz-label { font-size: 12px; color: var(--text-secondary); line-height: 1.5; font-family: sans-serif; }
+    .dz-hint { font-size: 10.5px; color: var(--text-secondary); opacity: 0.65; font-family: sans-serif; font-style: italic; line-height: 1.4; }
+    .dz-filename { font-size: 11px; font-weight: bold; color: var(--green-text); margin-top: 4px; font-family: sans-serif; word-break: break-all; }
     input[type=file] { display: none; }
 
     .run-btn {
-      width: 100%;
-      padding: 0.8rem;
-      border-radius: var(--radius-md);
-      border: 0.5px solid var(--border-mid);
-      background: var(--bg);
-      font-size: 15px;
-      cursor: pointer;
-      color: var(--text);
-      font-family: 'Georgia', serif;
-      letter-spacing: 0.01em;
-      transition: background 0.15s;
-      margin-bottom: 1.25rem;
+      width: 100%; padding: 0.85rem; border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-mid); background: var(--bg);
+      font-size: 15px; cursor: pointer; color: var(--text);
+      font-family: 'Georgia', serif; transition: background 0.15s; margin-bottom: 1.25rem;
     }
-
     .run-btn:hover:not(:disabled) { background: var(--bg-secondary); }
-    .run-btn:disabled { opacity: 0.38; cursor: not-allowed; }
-    .run-btn.ready { border-color: var(--green-border); color: #0F6E56; }
+    .run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .run-btn.ready { border-color: var(--green-border); color: var(--green-text); }
 
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 1.25rem;
-    }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+    @media (max-width: 500px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
-    @media (max-width: 500px) {
-      .stats { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    .stat {
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1rem;
-    }
-
-    .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.05em; }
-    .stat-val { font-size: 24px; font-weight: normal; }
+    .stat { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 0.8rem 1rem; }
+    .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-size: 26px; font-weight: normal; }
     .stat-val.green { color: #0F6E56; }
     .stat-val.amber { color: #854F0B; }
-    .stat-val.red { color: #A32D2D; }
-
+    .stat-val.red   { color: #A32D2D; }
     @media (prefers-color-scheme: dark) {
       .stat-val.green { color: #5DCAA5; }
       .stat-val.amber { color: #FAC775; }
-      .stat-val.red { color: #F09595; }
+      .stat-val.red   { color: #F09595; }
     }
 
     .warn-box {
-      font-size: 12px;
-      color: var(--amber-text);
-      background: var(--amber-bg);
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-      line-height: 1.9;
-      font-family: sans-serif;
+      font-size: 12px; color: var(--amber-text); background: var(--amber-bg);
+      border-radius: var(--radius-md); padding: 0.75rem 1rem;
+      margin-bottom: 1rem; line-height: 1.9; font-family: sans-serif;
     }
 
-    .legend {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-family: sans-serif;
-    }
-
+    .legend { display: flex; gap: 16px; margin-bottom: 0.85rem; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); font-family: sans-serif; }
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-    .table-wrap {
-      overflow-x: auto;
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-lg);
+    .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 4px 14px; border-radius: 999px; font-size: 12px;
+      border: 0.5px solid var(--border-mid); background: var(--bg);
+      cursor: pointer; font-family: sans-serif; color: var(--text); transition: background 0.12s;
     }
+    .filter-btn.active { background: var(--bg-secondary); border-color: var(--text-secondary); font-weight: bold; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      font-family: sans-serif;
-      min-width: 560px;
-    }
+    .table-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius-lg); }
 
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-family: sans-serif; min-width: 820px; }
     th {
-      background: var(--bg-secondary);
-      padding: 10px 12px;
-      text-align: left;
-      font-weight: bold;
-      font-size: 11px;
-      color: var(--text-secondary);
-      border-bottom: 0.5px solid var(--border);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
+      background: var(--bg-secondary); padding: 9px 11px; text-align: left;
+      font-weight: bold; font-size: 10.5px; color: var(--text-secondary);
+      border-bottom: 0.5px solid var(--border); text-transform: uppercase;
+      letter-spacing: 0.05em; white-space: nowrap;
     }
-
-    td {
-      padding: 9px 12px;
-      border-bottom: 0.5px solid var(--border);
-      color: var(--text);
-      max-width: 220px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
+    td { padding: 8px 11px; border-bottom: 0.5px solid var(--border); color: var(--text); vertical-align: top; }
     tr:last-child td { border-bottom: none; }
-    tr.row-full td:first-child { border-left: 3px solid var(--green-border); }
+    tr.row-full td:first-child    { border-left: 3px solid var(--green-border); }
     tr.row-partial td:first-child { border-left: 3px solid var(--amber-border); }
-    tr.row-none td:first-child { border-left: 3px solid var(--red-border); }
+    tr.row-none td:first-child    { border-left: 3px solid var(--red-border); }
 
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: bold;
-    }
+    .multi { display: flex; flex-direction: column; gap: 0; }
+    .multi span { display: block; padding: 2px 0; }
+    .multi span + span { border-top: 0.5px solid var(--border); }
 
-    .badge-full { background: var(--green-bg); color: var(--green-text); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: bold; white-space: nowrap; }
+    .badge-full    { background: var(--green-bg); color: var(--green-text); }
     .badge-partial { background: var(--amber-bg); color: var(--amber-text); }
-    .badge-none { background: var(--red-bg); color: var(--red-text); }
+    .badge-none    { background: var(--red-bg);   color: var(--red-text); }
 
     .muted { color: var(--text-secondary); }
 
-    .export-btn {
-      margin-top: 1rem;
-      padding: 0.5rem 1.25rem;
-      border-radius: var(--radius-md);
-      border: 0.5px solid var(--border-mid);
-      background: var(--bg);
-      font-size: 13px;
-      cursor: pointer;
-      color: var(--text);
-      font-family: sans-serif;
-      transition: background 0.15s;
+    .btn-row { display: flex; gap: 10px; margin-top: 1rem; flex-wrap: wrap; }
+    .action-btn {
+      padding: 0.5rem 1.25rem; border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-mid); background: var(--bg);
+      font-size: 13px; cursor: pointer; color: var(--text);
+      font-family: sans-serif; transition: background 0.15s;
     }
-
-    .export-btn:hover { background: var(--bg-secondary); }
+    .action-btn:hover { background: var(--bg-secondary); }
 
     #results { display: none; }
   </style>
 </head>
 <body>
-  <div class="page">
-    <header>
-      <h1>Transfer Course Matching</h1>
-      <p>Match transfer school CID &amp; course names against SAC equivalents</p>
-    </header>
+<div class="page">
+
+  <header>
+    <h1>Transfer Course Matching</h1>
+    <p>Match Coastline CID &amp; course codes against SAC equivalents</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Upload files</div>
+    <div class="upload-grid">
+
+      <label class="drop-zone" id="dz1">
+        <input type="file" id="f1" accept=".csv,.xlsx,.xls">
+        <div class="dz-icon">📋</div>
+        <div class="dz-num">File 1 — Transfer CID</div>
+        <div class="dz-label">Coastline CID + course titles</div>
+        <div class="dz-hint">C-ID #, Local Course Title(s),<br>Local Dept. Name &amp; Number</div>
+        <div class="dz-filename" id="dz1-name"></div>
+      </label>
+
+      <label class="drop-zone" id="dz2">
+        <input type="file" id="f2" accept=".csv,.xlsx,.xls">
+        <div class="dz-icon">📋</div>
+        <div class="dz-num">File 2 — Transfer Units</div>
+        <div class="dz-label">Coastline course codes + units</div>
+        <div class="dz-hint">course_code, course_title, units</div>
+        <div class="dz-filename" id="dz2-name"></div>
+      </label>
+
+      <label class="drop-zone" id="dz3">
+        <input type="file" id="f3" accept=".csv,.xlsx,.xls">
+        <div class="dz-icon">🏫</div>
+        <div class="dz-num">File 3 — SAC Courses</div>
+        <div class="dz-label">SAC CID + course names + units</div>
+        <div class="dz-hint">C-ID #, Local Course Title(s),<br>Local Dept. Name &amp; Number, MIN_UNITS</div>
+        <div class="dz-filename" id="dz3-name"></div>
+      </label>
+
+    </div>
+  </div>
+
+  <button class="run-btn" id="runBtn" disabled>Upload all 3 files to run matching</button>
+
+  <div id="results">
+    <div class="stats" id="statsRow"></div>
+    <div id="warnBox"></div>
 
     <div class="card">
-      <div class="card-title">Upload files</div>
-      <div class="upload-grid">
-        <label class="drop-zone" id="dz1">
-          <input type="file" id="f1" accept=".csv,.xlsx,.xls">
-          <div class="dz-icon">📋</div>
-          <div class="dz-file-num">File 1</div>
-          <div class="dz-label" id="dz1-label">Transfer school<br>CID + course names</div>
-          <div class="dz-filename" id="dz1-name"></div>
-        </label>
-        <label class="drop-zone" id="dz2">
-          <input type="file" id="f2" accept=".csv,.xlsx,.xls">
-          <div class="dz-icon">📋</div>
-          <div class="dz-file-num">File 2</div>
-          <div class="dz-label" id="dz2-label">Transfer school<br>course names + units</div>
-          <div class="dz-filename" id="dz2-name"></div>
-        </label>
-        <label class="drop-zone" id="dz3">
-          <input type="file" id="f3" accept=".csv,.xlsx,.xls">
-          <div class="dz-icon">🏫</div>
-          <div class="dz-file-num">File 3</div>
-          <div class="dz-label" id="dz3-label">SAC: CID +<br>course names + units</div>
-          <div class="dz-filename" id="dz3-name"></div>
-        </label>
+      <div class="card-title">Matched results</div>
+
+      <div class="filter-row" id="filterRow">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="full">Full match</button>
+        <button class="filter-btn" data-filter="partial">Partial</button>
+        <button class="filter-btn" data-filter="none">No SAC match</button>
       </div>
-    </div>
 
-    <button class="run-btn" id="runBtn" disabled>Upload all 3 files to run matching</button>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div> Full match — units + SAC equivalent found</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EF9F27"></div> Partial — one side missing</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div> No SAC match for this CID</div>
+      </div>
 
-    <div id="results">
-      <div class="stats" id="statsRow"></div>
-      <div id="warnBox"></div>
-      <div class="card">
-        <div class="card-title">Matched results</div>
-        <div class="legend">
-          <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div> Full match</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#EF9F27"></div> Partial match</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div> No SAC match</div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>CID</th>
-                <th>Transfer course</th>
-                <th>T. units</th>
-                <th>SAC course</th>
-                <th>SAC units</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
-        </div>
-        <button class="export-btn" id="exportBtn">⬇ Download CSV</button>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:85px">C-ID</th>
+              <th style="width:145px">Coastline course</th>
+              <th style="width:95px">Dept. code</th>
+              <th style="width:50px">Units</th>
+              <th style="width:90px">COR term</th>
+              <th style="width:185px">SAC course title</th>
+              <th style="width:95px">SAC dept. code</th>
+              <th style="width:55px">SAC units</th>
+              <th style="width:95px">Cert. date</th>
+              <th style="width:75px">Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="btn-row">
+        <button class="action-btn" id="exportCsvBtn">⬇ Download CSV</button>
+        <button class="action-btn" id="exportXlBtn">⬇ Download Excel</button>
       </div>
     </div>
   </div>
 
-  <script>
-    let files = [null, null, null];
-    let resultData = [];
+</div>
+<script>
+  let files = [null, null, null];
+  let allRows = [];
+  let activeFilter = 'all';
 
-    function norm(s) {
-      return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-    }
+  function norm(s) {
+    return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  }
 
-    function parseFile(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const data = e.target.result;
-          let wb;
-          try { wb = XLSX.read(data, { type: 'array' }); }
-          catch { wb = XLSX.read(new TextDecoder().decode(data), { type: 'string' }); }
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-          resolve(rows);
-        };
-        reader.readAsArrayBuffer(file);
-      });
-    }
-
-    function findCol(row, candidates) {
-      const keys = Object.keys(row);
-      for (const c of candidates) {
-        const match = keys.find(k => norm(k).includes(norm(c)));
-        if (match) return match;
-      }
-      return keys[0];
-    }
-
-    ['f1','f2','f3'].forEach((id, i) => {
-      document.getElementById(id).addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        files[i] = file;
-        const dz = document.getElementById('dz' + (i+1));
-        dz.classList.add('loaded');
-        document.getElementById('dz' + (i+1) + '-name').textContent = file.name;
-        if (files.every(f => f)) {
-          const btn = document.getElementById('runBtn');
-          btn.disabled = false;
-          btn.textContent = 'Run matching ↵';
-          btn.classList.add('ready');
-        }
-      });
+  function parseFile(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = e.target.result;
+        let wb;
+        try { wb = XLSX.read(data, { type: 'array' }); }
+        catch { wb = XLSX.read(new TextDecoder().decode(data), { type: 'string' }); }
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        resolve(rows);
+      };
+      reader.readAsArrayBuffer(file);
     });
+  }
 
-    document.getElementById('runBtn').addEventListener('click', async () => {
-      const btn = document.getElementById('runBtn');
-      btn.disabled = true;
-      btn.textContent = 'Processing...';
+  function findCol(row, candidates) {
+    if (!row) return null;
+    const keys = Object.keys(row);
+    for (const c of candidates) {
+      const match = keys.find(k => norm(k).includes(norm(c)));
+      if (match) return match;
+    }
+    return null;
+  }
 
-      try {
-        const [r1, r2, r3] = await Promise.all(files.map(parseFile));
+  function splitCodes(val) {
+    return String(val || '').split('+').map(s => s.trim()).filter(Boolean);
+  }
 
-        const cidCol1  = findCol(r1[0], ['cid']);
-        const nameCol1 = findCol(r1[0], ['course name','course','name','title']);
-        const nameCol2 = findCol(r2[0], ['course name','course','name','title']);
-        const unitCol2 = findCol(r2[0], ['unit','credit']);
-        const cidCol3  = findCol(r3[0], ['cid']);
-        const nameCol3 = findCol(r3[0], ['course name','course','name','title']);
-        const unitCol3 = findCol(r3[0], ['unit','credit']);
+  // Convert "Fall 2022" / "Spring 2019" etc. to a Date object (same logic as macro)
+  function termToDate(raw) {
+    if (!raw) return null;
+    const s = String(raw).trim();
+    const parts = s.split(/\s+/);
+    if (parts.length < 2) return null;
+    const term = parts[0].toLowerCase();
+    const yr = parseInt(parts[parts.length - 1], 10);
+    if (isNaN(yr)) return null;
+    let m;
+    if (term === 'spring')           m = 0;  // Jan 1
+    else if (term === 'summer')      m = 5;  // Jun 1
+    else if (term === 'fall' || term === 'autumn') m = 7; // Aug 1
+    else return null;
+    const d = m === 5 ? 1 : 1; // all start on the 1st
+    return new Date(yr, m, 1);
+  }
 
-        const file2Map = {};
-        r2.forEach(row => { file2Map[norm(row[nameCol2])] = row[unitCol2]; });
+  function fmtDate(dt) {
+    if (!dt || isNaN(dt)) return '';
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const yyyy = dt.getFullYear();
+    return mm + '/' + dd + '/' + yyyy;
+  }
 
-        const file3Map = {};
-        r3.forEach(row => { file3Map[norm(row[cidCol3])] = { name: row[nameCol3], units: row[unitCol3] }; });
+  function maxDate(a, b) {
+    if (!a && !b) return null;
+    if (!a) return b;
+    if (!b) return a;
+    return a >= b ? a : b;
+  }
 
-        const warnings = [];
-        resultData = [];
+  ['f1','f2','f3'].forEach((id, i) => {
+    document.getElementById(id).addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      files[i] = file;
+      document.getElementById('dz' + (i+1)).classList.add('loaded');
+      document.getElementById('dz' + (i+1) + '-name').textContent = file.name;
+      if (files.every(f => f)) {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = false;
+        btn.textContent = 'Run matching ↵';
+        btn.classList.add('ready');
+      }
+    });
+  });
 
-        r1.forEach(row => {
-          const cid    = String(row[cidCol1]  || '').trim();
-          const tName  = String(row[nameCol1] || '').trim();
-          const tUnits = file2Map[norm(tName)];
-          const sacMatch = file3Map[norm(cid)];
+  document.getElementById('runBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+    try {
+      const [r1, r2, r3] = await Promise.all(files.map(parseFile));
 
-          if (tUnits === undefined) warnings.push(`No unit match for "${tName}" (File 1 → File 2)`);
+      // Detect columns from first non-empty row
+      const s1 = r1.find(r => Object.values(r).some(v => String(v).trim()));
+      const s2 = r2.find(r => Object.values(r).some(v => String(v).trim()));
+      const s3 = r3.find(r => Object.values(r).some(v => String(v).trim()));
 
-          let status = 'none';
-          if (tUnits !== undefined && sacMatch)  status = 'full';
-          else if (tUnits !== undefined || sacMatch) status = 'partial';
+      // File 1 columns
+      const cidCol1     = findCol(s1, ['c-id #','c-id#','cid #','cid#','c-id','cid']);
+      const nameCol1    = findCol(s1, ['local course title','course title','local course']);
+      const deptCol1    = findCol(s1, ['local dept. name','local dept name','local dept','dept. name','dept name']);
+      const corTermCol1 = findCol(s1, ['cor effective term','effective term','cor term']);
 
-          resultData.push({
-            cid,
-            tName,
-            tUnits:   tUnits !== undefined ? tUnits : '',
-            sacName:  sacMatch ? sacMatch.name  : '',
-            sacUnits: sacMatch ? sacMatch.units : '',
-            status
-          });
+      // File 2 columns
+      const codeCol2 = findCol(s2, ['course_code','course code','code']);
+      const unitCol2 = findCol(s2, ['units','unit','credit']);
+
+      // File 3 columns
+      const cidCol3  = findCol(s3, ['c-id #','c-id#','cid #','cid#','c-id','cid']);
+      const nameCol3 = findCol(s3, ['local course title','course title','local course']);
+      const deptCol3 = findCol(s3, ['local dept. name','local dept name','local dept','dept. name','dept name']);
+      const unitCol3    = findCol(s3, ['min_units','min units','units','unit','credit']);
+      const corDateCol3 = findCol(s3, ['cor effective date','effective date','cor date']);
+
+      // Build File 2 map: norm(course_code) -> units
+      const f2Map = {};
+      r2.forEach(row => {
+        const code = norm(row[codeCol2]);
+        if (code) f2Map[code] = String(row[unitCol2] || '').trim();
+      });
+
+      // Build File 3 map: norm(cid) -> [{title, dept, units}]
+      const f3Map = {};
+      r3.forEach(row => {
+        const cid = norm(row[cidCol3]);
+        if (!cid) return;
+        if (!f3Map[cid]) f3Map[cid] = [];
+        f3Map[cid].push({
+          title:   String(row[nameCol3]   || '').trim(),
+          dept:    String(row[deptCol3]   || '').trim(),
+          units:   String(row[unitCol3]   || '').trim(),
+          corDate: String(row[corDateCol3] || '').trim()
         });
+      });
 
-        const full    = resultData.filter(r => r.status === 'full').length;
-        const partial = resultData.filter(r => r.status === 'partial').length;
-        const none    = resultData.filter(r => r.status === 'none').length;
+      const warnings = [];
+      allRows = [];
 
-        document.getElementById('statsRow').innerHTML = `
-          <div class="stat"><div class="stat-label">Total rows</div><div class="stat-val">${resultData.length}</div></div>
-          <div class="stat"><div class="stat-label">Full match</div><div class="stat-val green">${full}</div></div>
-          <div class="stat"><div class="stat-label">Partial</div><div class="stat-val amber">${partial}</div></div>
-          <div class="stat"><div class="stat-label">No SAC match</div><div class="stat-val red">${none}</div></div>
-        `;
+      r1.forEach(row => {
+        const cid     = String(row[cidCol1]  || '').trim();
+        const tName   = String(row[nameCol1] || '').trim();
+        const deptRaw = String(row[deptCol1] || '').trim();
+        if (!cid && !tName) return;
 
-        const warnBox = document.getElementById('warnBox');
-        if (warnings.length) {
-          warnBox.innerHTML = `<div class="warn-box"><strong>Warnings (${warnings.length}):</strong><br>${warnings.slice(0,10).join('<br>')}${warnings.length > 10 ? '<br>...and ' + (warnings.length - 10) + ' more' : ''}</div>`;
+        // Skip combo entries (dept codes containing "+")
+        if (deptRaw.includes('+')) return;
+
+        // Look up units from File 2 using dept code
+        const tUnits = f2Map[norm(deptRaw)] !== undefined
+          ? String(f2Map[norm(deptRaw)])
+          : '';
+        if (!tUnits) warnings.push('No unit match for dept code "' + deptRaw + '"');
+
+        // Convert File 1 COR effective term to a date
+        const corTermRaw = String(row[corTermCol1] || '').trim();
+        const f1Date = termToDate(corTermRaw);
+
+        const sacMatches = f3Map[norm(cid)] || [];
+
+        // Expand one-to-many SAC matches into separate rows
+        if (sacMatches.length > 0) {
+          sacMatches.forEach(m => {
+            // Parse File 3 COR effective date and take the max
+            const f3Date = m.corDate ? new Date(m.corDate) : null;
+            const certDate = maxDate(f1Date, f3Date);
+            const status = tUnits ? 'full' : 'partial';
+            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, certDate, status });
+          });
         } else {
-          warnBox.innerHTML = '';
+          const status = tUnits ? 'partial' : 'none';
+          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, certDate: f1Date, status });
         }
+      });
 
-        document.getElementById('tbody').innerHTML = resultData.map(r => `
-          <tr class="row-${r.status}">
-            <td>${r.cid}</td>
-            <td title="${r.tName}">${r.tName}</td>
-            <td>${r.tUnits}</td>
-            <td title="${r.sacName}">${r.sacName || '<span class="muted">—</span>'}</td>
-            <td>${r.sacUnits || '<span class="muted">—</span>'}</td>
-            <td><span class="badge badge-${r.status}">${r.status === 'full' ? 'Full match' : r.status === 'partial' ? 'Partial' : 'No match'}</span></td>
-          </tr>
-        `).join('');
+      const full    = allRows.filter(r => r.status === 'full').length;
+      const partial = allRows.filter(r => r.status === 'partial').length;
+      const none    = allRows.filter(r => r.status === 'none').length;
 
-        document.getElementById('results').style.display = 'block';
-        btn.textContent = 'Re-run matching ↵';
-        btn.disabled = false;
-      } catch(err) {
-        btn.textContent = 'Error — try again';
-        btn.disabled = false;
-        console.error(err);
-      }
+      document.getElementById('statsRow').innerHTML =
+        '<div class="stat"><div class="stat-label">Total rows</div><div class="stat-val">' + allRows.length + '</div></div>' +
+        '<div class="stat"><div class="stat-label">Full match</div><div class="stat-val green">' + full + '</div></div>' +
+        '<div class="stat"><div class="stat-label">Partial</div><div class="stat-val amber">' + partial + '</div></div>' +
+        '<div class="stat"><div class="stat-label">No SAC match</div><div class="stat-val red">' + none + '</div></div>';
+
+      const warnBox = document.getElementById('warnBox');
+      warnBox.innerHTML = warnings.length
+        ? '<div class="warn-box"><strong>Warnings (' + warnings.length + '):</strong><br>' +
+          warnings.slice(0,15).join('<br>') +
+          (warnings.length > 15 ? '<br>…and ' + (warnings.length - 15) + ' more' : '') + '</div>'
+        : '';
+
+      renderTable(activeFilter);
+      document.getElementById('results').style.display = 'block';
+      btn.textContent = 'Re-run matching ↵';
+      btn.disabled = false;
+
+    } catch(err) {
+      btn.textContent = 'Error — try again';
+      btn.disabled = false;
+      console.error(err);
+    }
+  });
+
+  function renderTable(filter) {
+    const rows = filter === 'all' ? allRows : allRows.filter(r => r.status === filter);
+    document.getElementById('tbody').innerHTML = rows.map(r => {
+      const sacTitle = r.sacMatch ? esc(r.sacMatch.title) : '<span class="muted">—</span>';
+      const sacDept  = r.sacMatch ? esc(r.sacMatch.dept)  : '<span class="muted">—</span>';
+      const sacUnits = r.sacMatch ? esc(r.sacMatch.units) : '<span class="muted">—</span>';
+      const certDisp = r.certDate ? fmtDate(r.certDate) : '<span class="muted">—</span>';
+      const badge = r.status === 'full'
+        ? '<span class="badge badge-full">Full match</span>'
+        : r.status === 'partial'
+        ? '<span class="badge badge-partial">Partial</span>'
+        : '<span class="badge badge-none">No match</span>';
+      return '<tr class="row-' + r.status + '">' +
+        '<td>' + esc(r.cid) + '</td>' +
+        '<td>' + esc(r.tName) + '</td>' +
+        '<td>' + esc(r.deptRaw) + '</td>' +
+        '<td>' + (r.tUnits ? esc(r.tUnits) : '<span class="muted">—</span>') + '</td>' +
+        '<td>' + esc(r.corTermRaw) + '</td>' +
+        '<td>' + sacTitle + '</td>' +
+        '<td>' + sacDept + '</td>' +
+        '<td>' + sacUnits + '</td>' +
+        '<td>' + certDisp + '</td>' +
+        '<td>' + badge + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  document.getElementById('filterRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    renderTable(activeFilter);
+  });
+
+  function buildExportRows() {
+    const out = [['C-ID','Coastline Course','Dept Code','Coastline Units','COR Term','SAC Course Title','SAC Dept Code','SAC Units','Certification Date','Status']];
+    allRows.forEach(r => {
+      out.push([
+        r.cid, r.tName, r.deptRaw, r.tUnits,
+        r.corTermRaw,
+        r.sacMatch ? r.sacMatch.title : '',
+        r.sacMatch ? r.sacMatch.dept  : '',
+        r.sacMatch ? r.sacMatch.units : '',
+        r.certDate ? fmtDate(r.certDate) : '',
+        r.status
+      ]);
     });
+    return out;
+  }
 
-    document.getElementById('exportBtn').addEventListener('click', () => {
-      const rows = [['CID','Transfer Course','Transfer Units','SAC Course','SAC Units','Status']];
-      resultData.forEach(r => rows.push([r.cid, r.tName, r.tUnits, r.sacName, r.sacUnits, r.status]));
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Matched Courses');
-      XLSX.writeFile(wb, 'course_matching_results.csv');
-    });
-  </script>
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    const ws = XLSX.utils.aoa_to_sheet(buildExportRows());
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Matched');
+    XLSX.writeFile(wb, 'course_matching_results.csv');
+  });
+
+  document.getElementById('exportXlBtn').addEventListener('click', () => {
+    const ws = XLSX.utils.aoa_to_sheet(buildExportRows());
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Matched');
+    XLSX.writeFile(wb, 'course_matching_results.xlsx');
+  });
+</script>
 </body>
 </html>
