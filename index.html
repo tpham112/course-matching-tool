@@ -94,6 +94,7 @@
     }
     .drop-zone:hover { background: var(--bg-secondary); }
     .drop-zone.loaded { border-style: solid; border-color: var(--green-border); background: var(--green-bg); }
+    .drop-zone.drag-over { background: var(--bg-secondary); border-color: var(--green-border); border-style: dashed; }
 
     .dz-icon { font-size: 20px; margin-bottom: 2px; }
     .dz-num { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); font-family: sans-serif; }
@@ -162,6 +163,7 @@
     tr.row-full td:first-child    { border-left: 3px solid var(--green-border); }
     tr.row-partial td:first-child { border-left: 3px solid var(--amber-border); }
     tr.row-none td:first-child    { border-left: 3px solid var(--red-border); }
+    tr.row-combo td:first-child   { border-left: 3px solid #378ADD; }
 
     .multi { display: flex; flex-direction: column; gap: 0; }
     .multi span { display: block; padding: 2px 0; }
@@ -171,6 +173,8 @@
     .badge-full    { background: var(--green-bg); color: var(--green-text); }
     .badge-partial { background: var(--amber-bg); color: var(--amber-text); }
     .badge-none    { background: var(--red-bg);   color: var(--red-text); }
+    .badge-combo   { background: #E6F1FB; color: #0C447C; }
+    [data-theme="dark"] .badge-combo { background: #042C53; color: #B5D4F4; }
 
     .muted { color: var(--text-secondary); }
 
@@ -246,13 +250,15 @@
         <button class="filter-btn active" data-filter="all">All</button>
         <button class="filter-btn" data-filter="full">Full match</button>
         <button class="filter-btn" data-filter="partial">Partial</button>
-        <button class="filter-btn" data-filter="none">No SAC match</button>
+        <button class="filter-btn" data-filter="none">No match</button>
+        <button class="filter-btn" data-filter="combo">Combo / sequence</button>
       </div>
 
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div> Full match — units + SAC equivalent found</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div> Full match — units + home school equivalent found</div>
         <div class="legend-item"><div class="legend-dot" style="background:#EF9F27"></div> Partial — one side missing</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div> No SAC match for this CID</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div> No home school match</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#378ADD"></div> Combo / sequence course</div>
       </div>
 
       <div class="table-wrap">
@@ -394,18 +400,47 @@
     return a >= b ? a : b;
   }
 
+  function handleFile(file, i) {
+    if (!file) return;
+    files[i] = file;
+    const dz = document.getElementById('dz' + (i+1));
+    dz.classList.add('loaded');
+    dz.classList.remove('drag-over');
+    document.getElementById('dz' + (i+1) + '-name').textContent = file.name;
+    if (files.every(f => f)) {
+      const btn = document.getElementById('runBtn');
+      btn.disabled = false;
+      btn.textContent = 'Run matching ↵';
+      btn.classList.add('ready');
+    }
+  }
+
   ['f1','f2','f3'].forEach((id, i) => {
+    // Click-to-browse
     document.getElementById(id).addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      files[i] = file;
-      document.getElementById('dz' + (i+1)).classList.add('loaded');
-      document.getElementById('dz' + (i+1) + '-name').textContent = file.name;
-      if (files.every(f => f)) {
-        const btn = document.getElementById('runBtn');
-        btn.disabled = false;
-        btn.textContent = 'Run matching ↵';
-        btn.classList.add('ready');
+      handleFile(e.target.files[0], i);
+    });
+
+    // Drag and drop
+    const dz = document.getElementById('dz' + (i+1));
+    dz.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      dz.classList.add('drag-over');
+    });
+    dz.addEventListener('dragleave', (e) => {
+      if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
+    });
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        handleFile(file, i);
+        // Also update the hidden input so change-based logic stays in sync
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById(id).files = dt.files;
       }
     });
   });
@@ -469,18 +504,21 @@
         const deptRaw = String(row[deptCol1] || '').trim();
         if (!cid && !tName) return;
 
-        // Skip combo entries (dept codes containing "+")
-        if (deptRaw.includes('+')) return;
+        const isCombo = deptRaw.includes('+');
+        const corTermRaw = String(row[corTermCol1] || '').trim();
+        const f1Date = termToDate(corTermRaw);
+
+        if (isCombo) {
+          // Include combo/sequence entries as no-match rows for visibility
+          allRows.push({ cid, tName, deptRaw, tUnits: '', corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status: 'none', isCombo: true });
+          return;
+        }
 
         // Look up units from File 2 using dept code
         const tUnits = f2Map[norm(deptRaw)] !== undefined
           ? String(f2Map[norm(deptRaw)])
           : '';
         if (!tUnits) warnings.push('No unit match for dept code "' + deptRaw + '"');
-
-        // Convert File 1 COR effective term to a date
-        const corTermRaw = String(row[corTermCol1] || '').trim();
-        const f1Date = termToDate(corTermRaw);
 
         const sacMatches = f3Map[norm(cid)] || [];
 
@@ -490,11 +528,11 @@
             const f3Date = parseCorDate(m.corDateRaw);
             const certDate = maxDate(f1Date, f3Date);
             const status = tUnits ? 'full' : 'partial';
-            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, f3Date, certDate, status });
+            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, f3Date, certDate, status, isCombo: false });
           });
         } else {
           const status = tUnits ? 'partial' : 'none';
-          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status });
+          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status, isCombo: false });
         }
       });
 
@@ -528,7 +566,11 @@
   });
 
   function renderTable(filter) {
-    const rows = filter === 'all' ? allRows : allRows.filter(r => r.status === filter);
+    let rows;
+    if (filter === 'all')     rows = allRows;
+    else if (filter === 'combo') rows = allRows.filter(r => r.isCombo);
+    else rows = allRows.filter(r => !r.isCombo && r.status === filter);
+
     document.getElementById('tbody').innerHTML = rows.map(r => {
       const sacTitle  = r.sacMatch ? esc(r.sacMatch.title) : '<span class="muted">—</span>';
       const sacDept   = r.sacMatch ? esc(r.sacMatch.dept)  : '<span class="muted">—</span>';
@@ -536,12 +578,17 @@
       const f1DateStr = r.f1Date   ? fmtDate(r.f1Date)     : '<span class="muted">—</span>';
       const f3DateStr = r.f3Date   ? fmtDate(r.f3Date)     : '<span class="muted">—</span>';
       const certDisp  = r.certDate ? fmtDate(r.certDate)   : '<span class="muted">—</span>';
-      const badge = r.status === 'full'
-        ? '<span class="badge badge-full">Full match</span>'
-        : r.status === 'partial'
-        ? '<span class="badge badge-partial">Partial</span>'
-        : '<span class="badge badge-none">No match</span>';
-      return '<tr class="row-' + r.status + '">' +
+      let badge;
+      if (r.isCombo) {
+        badge = '<span class="badge badge-combo">Combo</span>';
+      } else if (r.status === 'full') {
+        badge = '<span class="badge badge-full">Full match</span>';
+      } else if (r.status === 'partial') {
+        badge = '<span class="badge badge-partial">Partial</span>';
+      } else {
+        badge = '<span class="badge badge-none">No match</span>';
+      }
+      return '<tr class="row-' + (r.isCombo ? 'combo' : r.status) + '">' +
         '<td>' + esc(r.cid) + '</td>' +
         '<td>' + esc(r.tName) + '</td>' +
         '<td>' + esc(r.deptRaw) + '</td>' +
@@ -586,7 +633,7 @@
         r.sacMatch ? r.sacMatch.units     : '',
         r.f3Date   ? fmtDate(r.f3Date)   : '',
         r.certDate ? fmtDate(r.certDate) : '',
-        r.status
+        r.isCombo ? 'combo' : r.status
       ]);
     });
     return out;
