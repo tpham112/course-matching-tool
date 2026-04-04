@@ -27,27 +27,31 @@
       --red-bg: #FCEBEB;
       --red-text: #791F1F;
       --red-border: #E24B4A;
+      --stat-green: #0F6E56;
+      --stat-amber: #854F0B;
+      --stat-red: #A32D2D;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #1e1e1c;
-        --bg-secondary: #272725;
-        --bg-tertiary: #1a1a18;
-        --text: #f0ede6;
-        --text-secondary: #9a9a94;
-        --border: rgba(255,255,255,0.1);
-        --border-mid: rgba(255,255,255,0.2);
-        --green-bg: #04342C;
-        --green-text: #9FE1CB;
-        --green-border: #1D9E75;
-        --amber-bg: #412402;
-        --amber-text: #FAC775;
-        --amber-border: #EF9F27;
-        --red-bg: #501313;
-        --red-text: #F7C1C1;
-        --red-border: #E24B4A;
-      }
+    [data-theme="dark"] {
+      --bg: #1e1e1c;
+      --bg-secondary: #272725;
+      --bg-tertiary: #1a1a18;
+      --text: #f0ede6;
+      --text-secondary: #9a9a94;
+      --border: rgba(255,255,255,0.1);
+      --border-mid: rgba(255,255,255,0.2);
+      --green-bg: #04342C;
+      --green-text: #9FE1CB;
+      --green-border: #1D9E75;
+      --amber-bg: #412402;
+      --amber-text: #FAC775;
+      --amber-border: #EF9F27;
+      --red-bg: #501313;
+      --red-text: #F7C1C1;
+      --red-border: #E24B4A;
+      --stat-green: #5DCAA5;
+      --stat-amber: #FAC775;
+      --stat-red: #F09595;
     }
 
     body {
@@ -114,14 +118,17 @@
     .stat { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 0.8rem 1rem; }
     .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.05em; }
     .stat-val { font-size: 26px; font-weight: normal; }
-    .stat-val.green { color: #0F6E56; }
-    .stat-val.amber { color: #854F0B; }
-    .stat-val.red   { color: #A32D2D; }
-    @media (prefers-color-scheme: dark) {
-      .stat-val.green { color: #5DCAA5; }
-      .stat-val.amber { color: #FAC775; }
-      .stat-val.red   { color: #F09595; }
+    .stat-val.green { color: var(--stat-green); }
+    .stat-val.amber { color: var(--stat-amber); }
+    .stat-val.red   { color: var(--stat-red); }
+
+    .theme-btn {
+      padding: 5px 14px; border-radius: 999px; font-size: 12px;
+      border: 0.5px solid var(--border-mid); background: var(--bg);
+      cursor: pointer; font-family: sans-serif; color: var(--text);
+      transition: background 0.15s; white-space: nowrap;
     }
+    .theme-btn:hover { background: var(--bg-secondary); }
 
     .warn-box {
       font-size: 12px; color: var(--amber-text); background: var(--amber-bg);
@@ -183,8 +190,13 @@
 <div class="page">
 
   <header>
-    <h1>Transfer Course Matching</h1>
-    <p>Match transfer school CID &amp; course codes against home school equivalents</p>
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+      <div>
+        <h1>Transfer Course Matching</h1>
+        <p>Match transfer school CID &amp; course codes against home school equivalents</p>
+      </div>
+      <button class="theme-btn" id="themeBtn">☽ Dark mode</button>
+    </div>
   </header>
 
   <div class="card">
@@ -252,12 +264,12 @@
               <th style="width:90px">Dept. code</th>
               <th style="width:45px">Units</th>
               <th style="width:85px">Transfer COR term</th>
-              <th style="width:85px">Transfer date</th>
+              <th style="width:90px">Transfer cert date</th>
               <th style="width:160px">Home school course</th>
               <th style="width:85px">Home dept. code</th>
               <th style="width:45px">HS units</th>
-              <th style="width:85px">Home school date</th>
-              <th style="width:85px">Cert. date</th>
+              <th style="width:90px">Home cert date</th>
+              <th style="width:90px">Final cert date</th>
               <th style="width:75px">Status</th>
             </tr>
           </thead>
@@ -312,7 +324,7 @@
     return String(val || '').split('+').map(s => s.trim()).filter(Boolean);
   }
 
-  // Convert "Fall 2022" / "Spring 2019" etc. to a Date object
+  // Convert "Fall 2022" / "Spring 2019" etc. to a Date object (UTC, no timezone shift)
   // Spring = 1/1/yyyy, Summer = 6/1/yyyy, Fall/Autumn = 8/1/yyyy
   function termToDate(raw) {
     if (!raw) return null;
@@ -323,38 +335,55 @@
     const yr = parseInt(parts[parts.length - 1], 10);
     if (isNaN(yr)) return null;
     let mo;
-    if (term === 'spring')                        mo = 1;  // Jan 1
-    else if (term === 'summer')                   mo = 6;  // Jun 1
-    else if (term === 'fall' || term === 'autumn') mo = 8; // Aug 1
+    if (term === 'spring')                         mo = 1;  // Jan 1
+    else if (term === 'summer')                    mo = 6;  // Jun 1
+    else if (term === 'fall' || term === 'autumn') mo = 8;  // Aug 1
     else return null;
-    return new Date(yr, mo - 1, 1);
+    // Use Date.UTC so there is zero timezone offset
+    return new Date(Date.UTC(yr, mo - 1, 1));
   }
 
-  // Parse a date value that may be:
-  //   - an Excel serial number (number)
-  //   - a string like "8/1/2013" or "2013-08-01"
+  // Parse a date value from File 3's COR effective date column.
+  // XLSX with raw:true gives date cells as Excel serial numbers (integers).
+  // String values like "8/1/2013" are also handled.
+  // All results are returned as UTC midnight to avoid timezone shifts.
   function parseCorDate(val) {
-    if (!val && val !== 0) return null;
+    if (val === null || val === undefined || val === '') return null;
     const v = String(val).trim();
     if (!v) return null;
-    // Excel serial number
-    if (/^\d+$/.test(v)) {
-      const serial = parseInt(v, 10);
-      // Excel epoch is Dec 30 1899; JS epoch is Jan 1 1970
-      const ms = (serial - 25569) * 86400 * 1000;
+
+    // Excel serial number (pure integer)
+    if (/^\d+(\.\d+)?$/.test(v)) {
+      const serial = parseFloat(v);
+      // Excel serial: days since Jan 0 1900 (with leap-year bug)
+      // Subtract 25569 to get days since Unix epoch, multiply by ms per day
+      const ms = Math.round((serial - 25569) * 86400 * 1000);
       const d = new Date(ms);
-      return isNaN(d) ? null : d;
+      if (isNaN(d)) return null;
+      // Re-express as UTC midnight on that calendar date
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     }
-    // String date
+
+    // String date — parse and re-express as UTC midnight
+    // Handle M/D/YYYY and YYYY-MM-DD
+    let m;
+    if ((m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) {
+      return new Date(Date.UTC(+m[3], +m[1] - 1, +m[2]));
+    }
+    if ((m = v.match(/^(\d{4})-(\d{2})-(\d{2})/))) {
+      return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    }
+    // Fallback
     const d = new Date(v);
-    return isNaN(d) ? null : d;
+    return isNaN(d) ? null : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   }
 
+  // Format a date using UTC getters so the display matches the stored UTC date
   function fmtDate(dt) {
     if (!dt || isNaN(dt)) return '';
-    const mm = String(dt.getMonth() + 1).padStart(2, '0');
-    const dd = String(dt.getDate()).padStart(2, '0');
-    const yyyy = dt.getFullYear();
+    const mm   = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd   = String(dt.getUTCDate()).padStart(2, '0');
+    const yyyy = dt.getUTCFullYear();
     return mm + '/' + dd + '/' + yyyy;
   }
 
@@ -543,7 +572,7 @@
   });
 
   function buildExportRows() {
-    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Date','Home School Course','Home Dept Code','Home School Units','Home School Date','Certification Date','Status']];
+    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Cert Date','Home School Course','Home Dept Code','Home School Units','Home Cert Date','Final Cert Date','Status']];
     allRows.forEach(r => {
       out.push([
         r.cid,
@@ -576,6 +605,22 @@
     XLSX.utils.book_append_sheet(wb, ws, 'Matched');
     XLSX.writeFile(wb, 'course_matching_results.xlsx');
   });
+
+  // Theme toggle
+  (function() {
+    const btn = document.getElementById('themeBtn');
+    const root = document.documentElement;
+    // Initialise from system preference
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let dark = prefersDark;
+    if (dark) root.setAttribute('data-theme', 'dark');
+    btn.textContent = dark ? '☀ Light mode' : '☽ Dark mode';
+    btn.addEventListener('click', () => {
+      dark = !dark;
+      root.setAttribute('data-theme', dark ? 'dark' : 'light');
+      btn.textContent = dark ? '☀ Light mode' : '☽ Dark mode';
+    });
+  })();
 </script>
 </body>
 </html>
