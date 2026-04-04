@@ -184,7 +184,7 @@
 
   <header>
     <h1>Transfer Course Matching</h1>
-    <p>Match Coastline CID &amp; course codes against SAC equivalents</p>
+    <p>Match transfer school CID &amp; course codes against home school equivalents</p>
   </header>
 
   <div class="card">
@@ -195,7 +195,7 @@
         <input type="file" id="f1" accept=".csv,.xlsx,.xls">
         <div class="dz-icon">📋</div>
         <div class="dz-num">File 1 — Transfer CID</div>
-        <div class="dz-label">Coastline CID + course titles</div>
+        <div class="dz-label">Transfer school CID + course titles</div>
         <div class="dz-hint">C-ID #, Local Course Title(s),<br>Local Dept. Name &amp; Number</div>
         <div class="dz-filename" id="dz1-name"></div>
       </label>
@@ -204,7 +204,7 @@
         <input type="file" id="f2" accept=".csv,.xlsx,.xls">
         <div class="dz-icon">📋</div>
         <div class="dz-num">File 2 — Transfer Units</div>
-        <div class="dz-label">Coastline course codes + units</div>
+        <div class="dz-label">Transfer school course codes + units</div>
         <div class="dz-hint">course_code, course_title, units</div>
         <div class="dz-filename" id="dz2-name"></div>
       </label>
@@ -212,8 +212,8 @@
       <label class="drop-zone" id="dz3">
         <input type="file" id="f3" accept=".csv,.xlsx,.xls">
         <div class="dz-icon">🏫</div>
-        <div class="dz-num">File 3 — SAC Courses</div>
-        <div class="dz-label">SAC CID + course names + units</div>
+        <div class="dz-num">File 3 — Home School Courses</div>
+        <div class="dz-label">Home school CID + course names + units</div>
         <div class="dz-hint">C-ID #, Local Course Title(s),<br>Local Dept. Name &amp; Number, MIN_UNITS</div>
         <div class="dz-filename" id="dz3-name"></div>
       </label>
@@ -247,15 +247,17 @@
         <table>
           <thead>
             <tr>
-              <th style="width:85px">C-ID</th>
-              <th style="width:145px">Coastline course</th>
-              <th style="width:95px">Dept. code</th>
-              <th style="width:50px">Units</th>
-              <th style="width:90px">COR term</th>
-              <th style="width:185px">SAC course title</th>
-              <th style="width:95px">SAC dept. code</th>
-              <th style="width:55px">SAC units</th>
-              <th style="width:95px">Cert. date</th>
+              <th style="width:80px">C-ID</th>
+              <th style="width:130px">Transfer course</th>
+              <th style="width:90px">Dept. code</th>
+              <th style="width:45px">Units</th>
+              <th style="width:85px">Transfer COR term</th>
+              <th style="width:85px">Transfer date</th>
+              <th style="width:160px">Home school course</th>
+              <th style="width:85px">Home dept. code</th>
+              <th style="width:45px">HS units</th>
+              <th style="width:85px">Home school date</th>
+              <th style="width:85px">Cert. date</th>
               <th style="width:75px">Status</th>
             </tr>
           </thead>
@@ -289,7 +291,7 @@
         try { wb = XLSX.read(data, { type: 'array' }); }
         catch { wb = XLSX.read(new TextDecoder().decode(data), { type: 'string' }); }
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
         resolve(rows);
       };
       reader.readAsArrayBuffer(file);
@@ -310,7 +312,8 @@
     return String(val || '').split('+').map(s => s.trim()).filter(Boolean);
   }
 
-  // Convert "Fall 2022" / "Spring 2019" etc. to a Date object (same logic as macro)
+  // Convert "Fall 2022" / "Spring 2019" etc. to a Date object
+  // Spring = 1/1/yyyy, Summer = 6/1/yyyy, Fall/Autumn = 8/1/yyyy
   function termToDate(raw) {
     if (!raw) return null;
     const s = String(raw).trim();
@@ -319,13 +322,32 @@
     const term = parts[0].toLowerCase();
     const yr = parseInt(parts[parts.length - 1], 10);
     if (isNaN(yr)) return null;
-    let m;
-    if (term === 'spring')           m = 0;  // Jan 1
-    else if (term === 'summer')      m = 5;  // Jun 1
-    else if (term === 'fall' || term === 'autumn') m = 7; // Aug 1
+    let mo;
+    if (term === 'spring')                        mo = 1;  // Jan 1
+    else if (term === 'summer')                   mo = 6;  // Jun 1
+    else if (term === 'fall' || term === 'autumn') mo = 8; // Aug 1
     else return null;
-    const d = m === 5 ? 1 : 1; // all start on the 1st
-    return new Date(yr, m, 1);
+    return new Date(yr, mo - 1, 1);
+  }
+
+  // Parse a date value that may be:
+  //   - an Excel serial number (number)
+  //   - a string like "8/1/2013" or "2013-08-01"
+  function parseCorDate(val) {
+    if (!val && val !== 0) return null;
+    const v = String(val).trim();
+    if (!v) return null;
+    // Excel serial number
+    if (/^\d+$/.test(v)) {
+      const serial = parseInt(v, 10);
+      // Excel epoch is Dec 30 1899; JS epoch is Jan 1 1970
+      const ms = (serial - 25569) * 86400 * 1000;
+      const d = new Date(ms);
+      return isNaN(d) ? null : d;
+    }
+    // String date
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
   }
 
   function fmtDate(dt) {
@@ -402,10 +424,10 @@
         if (!cid) return;
         if (!f3Map[cid]) f3Map[cid] = [];
         f3Map[cid].push({
-          title:   String(row[nameCol3]   || '').trim(),
-          dept:    String(row[deptCol3]   || '').trim(),
-          units:   String(row[unitCol3]   || '').trim(),
-          corDate: String(row[corDateCol3] || '').trim()
+          title:      String(row[nameCol3]    || '').trim(),
+          dept:       String(row[deptCol3]    || '').trim(),
+          units:      String(row[unitCol3]    || '').trim(),
+          corDateRaw: row[corDateCol3] != null ? row[corDateCol3] : ''
         });
       });
 
@@ -436,15 +458,14 @@
         // Expand one-to-many SAC matches into separate rows
         if (sacMatches.length > 0) {
           sacMatches.forEach(m => {
-            // Parse File 3 COR effective date and take the max
-            const f3Date = m.corDate ? new Date(m.corDate) : null;
+            const f3Date = parseCorDate(m.corDateRaw);
             const certDate = maxDate(f1Date, f3Date);
             const status = tUnits ? 'full' : 'partial';
-            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, certDate, status });
+            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, f3Date, certDate, status });
           });
         } else {
           const status = tUnits ? 'partial' : 'none';
-          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, certDate: f1Date, status });
+          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status });
         }
       });
 
@@ -480,10 +501,12 @@
   function renderTable(filter) {
     const rows = filter === 'all' ? allRows : allRows.filter(r => r.status === filter);
     document.getElementById('tbody').innerHTML = rows.map(r => {
-      const sacTitle = r.sacMatch ? esc(r.sacMatch.title) : '<span class="muted">—</span>';
-      const sacDept  = r.sacMatch ? esc(r.sacMatch.dept)  : '<span class="muted">—</span>';
-      const sacUnits = r.sacMatch ? esc(r.sacMatch.units) : '<span class="muted">—</span>';
-      const certDisp = r.certDate ? fmtDate(r.certDate) : '<span class="muted">—</span>';
+      const sacTitle  = r.sacMatch ? esc(r.sacMatch.title) : '<span class="muted">—</span>';
+      const sacDept   = r.sacMatch ? esc(r.sacMatch.dept)  : '<span class="muted">—</span>';
+      const sacUnits  = r.sacMatch ? esc(r.sacMatch.units) : '<span class="muted">—</span>';
+      const f1DateStr = r.f1Date   ? fmtDate(r.f1Date)     : '<span class="muted">—</span>';
+      const f3DateStr = r.f3Date   ? fmtDate(r.f3Date)     : '<span class="muted">—</span>';
+      const certDisp  = r.certDate ? fmtDate(r.certDate)   : '<span class="muted">—</span>';
       const badge = r.status === 'full'
         ? '<span class="badge badge-full">Full match</span>'
         : r.status === 'partial'
@@ -495,9 +518,11 @@
         '<td>' + esc(r.deptRaw) + '</td>' +
         '<td>' + (r.tUnits ? esc(r.tUnits) : '<span class="muted">—</span>') + '</td>' +
         '<td>' + esc(r.corTermRaw) + '</td>' +
+        '<td>' + f1DateStr + '</td>' +
         '<td>' + sacTitle + '</td>' +
         '<td>' + sacDept + '</td>' +
         '<td>' + sacUnits + '</td>' +
+        '<td>' + f3DateStr + '</td>' +
         '<td>' + certDisp + '</td>' +
         '<td>' + badge + '</td>' +
         '</tr>';
@@ -518,14 +543,19 @@
   });
 
   function buildExportRows() {
-    const out = [['C-ID','Coastline Course','Dept Code','Coastline Units','COR Term','SAC Course Title','SAC Dept Code','SAC Units','Certification Date','Status']];
+    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Date','Home School Course','Home Dept Code','Home School Units','Home School Date','Certification Date','Status']];
     allRows.forEach(r => {
       out.push([
-        r.cid, r.tName, r.deptRaw, r.tUnits,
+        r.cid,
+        r.tName,
+        r.deptRaw,
+        r.tUnits,
         r.corTermRaw,
-        r.sacMatch ? r.sacMatch.title : '',
-        r.sacMatch ? r.sacMatch.dept  : '',
-        r.sacMatch ? r.sacMatch.units : '',
+        r.f1Date   ? fmtDate(r.f1Date)   : '',
+        r.sacMatch ? r.sacMatch.title     : '',
+        r.sacMatch ? r.sacMatch.dept      : '',
+        r.sacMatch ? r.sacMatch.units     : '',
+        r.f3Date   ? fmtDate(r.f3Date)   : '',
         r.certDate ? fmtDate(r.certDate) : '',
         r.status
       ]);
