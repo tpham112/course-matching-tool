@@ -188,6 +188,28 @@
     .action-btn:hover { background: var(--bg-secondary); }
 
     #results { display: none; }
+
+    .mode-tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border: 0.5px solid var(--border-mid); border-radius: var(--radius-lg); overflow: hidden; }
+    .mode-tab {
+      flex: 1; padding: 0.7rem 1rem; text-align: center; cursor: pointer;
+      font-family: sans-serif; font-size: 13px; font-weight: bold;
+      background: var(--bg); color: var(--text-secondary);
+      border: none; transition: background 0.15s, color 0.15s;
+    }
+    .mode-tab:first-child { border-right: 0.5px solid var(--border-mid); }
+    .mode-tab.active { background: var(--bg-secondary); color: var(--text); }
+
+    .mode-panel { display: none; }
+    .mode-panel.active { display: block; }
+
+    .its-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+    @media (max-width: 500px) { .its-fields { grid-template-columns: 1fr; } }
+    .its-field label { display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-family: sans-serif; margin-bottom: 5px; }
+    .its-field input { width: 100%; padding: 8px 10px; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); background: var(--bg); color: var(--text); font-family: sans-serif; font-size: 13px; }
+    .its-field input:focus { outline: none; border-color: var(--green-border); }
+
+    .preview-table-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius-lg); margin-top: 1rem; }
+    .preview-info { font-size: 12px; color: var(--text-secondary); font-family: sans-serif; margin-bottom: 0.5rem; }
   </style>
 </head>
 <body>
@@ -202,6 +224,14 @@
       <button class="theme-btn" id="themeBtn">☽ Dark mode</button>
     </div>
   </header>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="match">Mode 1 — Find matches</button>
+    <button class="mode-tab" data-mode="its">Mode 2 — Format ITS import</button>
+  </div>
+
+  <!-- MODE 1 -->
+  <div class="mode-panel active" id="panel-match">
 
   <div class="card">
     <div class="card-title">Upload files</div>
@@ -276,6 +306,7 @@
               <th style="width:45px">HS units</th>
               <th style="width:90px">Home cert date</th>
               <th style="width:90px">Final cert date</th>
+              <th style="width:75px">Internal ID</th>
               <th style="width:75px">Status</th>
             </tr>
           </thead>
@@ -286,6 +317,65 @@
       <div class="btn-row">
         <button class="action-btn" id="exportCsvBtn">⬇ Download CSV</button>
         <button class="action-btn" id="exportXlBtn">⬇ Download Excel</button>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- end panel-match -->
+
+  <!-- MODE 2 -->
+  <div class="mode-panel" id="panel-its">
+    <div class="card">
+      <div class="card-title">School information</div>
+      <div class="its-fields">
+        <div class="its-field">
+          <label>Transfer school name</label>
+          <input type="text" id="itsSchoolName" placeholder="e.g. Golden West College" />
+        </div>
+        <div class="its-field">
+          <label>School code</label>
+          <input type="text" id="itsSchoolCode" placeholder="e.g. 27614" />
+        </div>
+      </div>
+      <div class="card-title" style="margin-top:0.5rem">Upload reviewed CSV / Excel from articulation officer</div>
+      <label class="drop-zone" id="dz-its" style="max-width:400px; min-height:110px;">
+        <input type="file" id="f-its" accept=".csv,.xlsx,.xls">
+        <div class="dz-icon">📄</div>
+        <div class="dz-label">Drop reviewed file here or click to browse</div>
+        <div class="dz-hint">Expects the matching output columns incl. Dept Code, Transfer Units, Home School Units, Internal ID, Final Cert Date</div>
+        <div class="dz-filename" id="its-filename"></div>
+      </label>
+    </div>
+
+    <button class="run-btn" id="itsBuildBtn" disabled>Upload reviewed file to generate ITS import</button>
+
+    <div id="its-results" style="display:none">
+      <div class="card">
+        <div class="card-title">ITS import preview</div>
+        <p class="preview-info" id="its-preview-info"></p>
+        <div class="preview-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>TRANSFER COURSE</th>
+                <th>TITLE</th>
+                <th>TRANSFER CREDIT</th>
+                <th>EQUIV CREDIT</th>
+                <th>EQUIVALENT COURSE</th>
+                <th>START</th>
+                <th>END</th>
+                <th>COMMENTS 1</th>
+                <th>COMMENTS 2</th>
+                <th>SCHOOL</th>
+                <th>CODE</th>
+              </tr>
+            </thead>
+            <tbody id="its-tbody"></tbody>
+          </table>
+        </div>
+        <div class="btn-row">
+          <button class="action-btn" id="itsExportXlBtn">⬇ Download ITS Import (.xlsx)</button>
+        </div>
       </div>
     </div>
   </div>
@@ -473,6 +563,7 @@
       const deptCol3 = findCol(s3, ['local dept. name','local dept name','local dept','dept. name','dept name']);
       const unitCol3    = findCol(s3, ['min_units','min units','units','unit','credit']);
       const corDateCol3 = findCol(s3, ['cor effective date','effective date','cor date']);
+      const internalIdCol3 = findCol(s3, ['internalid','internal id','internal_id']);
 
       // Build File 2 map: norm(course_code) -> units
       const f2Map = {};
@@ -491,7 +582,8 @@
           title:      String(row[nameCol3]    || '').trim(),
           dept:       String(row[deptCol3]    || '').trim(),
           units:      String(row[unitCol3]    || '').trim(),
-          corDateRaw: row[corDateCol3] != null ? row[corDateCol3] : ''
+          corDateRaw: row[corDateCol3] != null ? row[corDateCol3] : '',
+          internalId: String(row[internalIdCol3] || '').trim()
         });
       });
 
@@ -509,12 +601,10 @@
         const f1Date = termToDate(corTermRaw);
 
         if (isCombo) {
-          // Include combo/sequence entries as no-match rows for visibility
           allRows.push({ cid, tName, deptRaw, tUnits: '', corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status: 'none', isCombo: true });
           return;
         }
 
-        // Look up units from File 2 using dept code
         const tUnits = f2Map[norm(deptRaw)] !== undefined
           ? String(f2Map[norm(deptRaw)])
           : '';
@@ -522,17 +612,16 @@
 
         const sacMatches = f3Map[norm(cid)] || [];
 
-        // Expand one-to-many SAC matches into separate rows
         if (sacMatches.length > 0) {
           sacMatches.forEach(m => {
             const f3Date = parseCorDate(m.corDateRaw);
             const certDate = maxDate(f1Date, f3Date);
             const status = tUnits ? 'full' : 'partial';
-            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, f3Date, certDate, status, isCombo: false });
+            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, f3Date, certDate, status, isCombo: false, internalId: m.internalId });
           });
         } else {
           const status = tUnits ? 'partial' : 'none';
-          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status, isCombo: false });
+          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status, isCombo: false, internalId: '' });
         }
       });
 
@@ -600,6 +689,7 @@
         '<td>' + sacUnits + '</td>' +
         '<td>' + f3DateStr + '</td>' +
         '<td>' + certDisp + '</td>' +
+        '<td>' + esc(r.internalId || '') + '</td>' +
         '<td>' + badge + '</td>' +
         '</tr>';
     }).join('');
@@ -619,20 +709,17 @@
   });
 
   function buildExportRows() {
-    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Cert Date','Home School Course','Home Dept Code','Home School Units','Home Cert Date','Final Cert Date','Status']];
+    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Cert Date','Home School Course','Home Dept Code','Home School Units','Home Cert Date','Final Cert Date','Internal ID','Status']];
     allRows.forEach(r => {
       out.push([
-        r.cid,
-        r.tName,
-        r.deptRaw,
-        r.tUnits,
-        r.corTermRaw,
+        r.cid, r.tName, r.deptRaw, r.tUnits, r.corTermRaw,
         r.f1Date   ? fmtDate(r.f1Date)   : '',
         r.sacMatch ? r.sacMatch.title     : '',
         r.sacMatch ? r.sacMatch.dept      : '',
         r.sacMatch ? r.sacMatch.units     : '',
         r.f3Date   ? fmtDate(r.f3Date)   : '',
         r.certDate ? fmtDate(r.certDate) : '',
+        r.internalId || '',
         r.isCombo ? 'combo' : r.status
       ]);
     });
@@ -651,6 +738,128 @@
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Matched');
     XLSX.writeFile(wb, 'course_matching_results.xlsx');
+  });
+
+  // Mode tab switching
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.mode).classList.add('active');
+    });
+  });
+
+  // Mode 2: ITS import formatting
+  let itsRows = [];
+
+  function handleItsFile(file) {
+    if (!file) return;
+    const dz = document.getElementById('dz-its');
+    dz.classList.add('loaded');
+    dz.classList.remove('drag-over');
+    document.getElementById('its-filename').textContent = file.name;
+    document.getElementById('itsBuildBtn').disabled = false;
+    document.getElementById('itsBuildBtn').textContent = 'Generate ITS import ↵';
+    document.getElementById('itsBuildBtn').classList.add('ready');
+  }
+
+  document.getElementById('f-its').addEventListener('change', e => handleItsFile(e.target.files[0]));
+
+  const dzIts = document.getElementById('dz-its');
+  dzIts.addEventListener('dragover', e => { e.preventDefault(); dzIts.classList.add('drag-over'); });
+  dzIts.addEventListener('dragleave', e => { if (!dzIts.contains(e.relatedTarget)) dzIts.classList.remove('drag-over'); });
+  dzIts.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleItsFile(file);
+      const dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('f-its').files = dt.files;
+    }
+  });
+
+  document.getElementById('itsBuildBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('itsBuildBtn');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    const schoolName = document.getElementById('itsSchoolName').value.trim() || '';
+    const schoolCode = document.getElementById('itsSchoolCode').value.trim() || '';
+    const file = document.getElementById('f-its').files[0];
+    if (!file) { btn.disabled = false; btn.textContent = 'Generate ITS import ↵'; return; }
+
+    try {
+      const rows = await parseFile(file);
+      if (!rows.length) throw new Error('No rows found');
+
+      const s = rows[0];
+      // Map columns from the reviewed output file
+      const deptCol    = findCol(s, ['dept code','dept. code','deptcode']);
+      const titleCol   = findCol(s, ['transfer course','course','title','local course title']);
+      const tUnitsCol  = findCol(s, ['transfer units','transfer credit','units']);
+      const hsUnitsCol = findCol(s, ['home school units','hs units','equiv credit','sac units']);
+      const idCol      = findCol(s, ['internal id','internalid','equivalent course']);
+      const dateCol    = findCol(s, ['final cert date','cert date','certification date','start']);
+      const statusCol  = findCol(s, ['status']);
+
+      itsRows = [];
+      rows.forEach(row => {
+        // Skip rows that are combos or have no internal ID
+        const status = String(row[statusCol] || '').trim().toLowerCase();
+        if (status === 'combo' || status === 'none' || status === 'partial') return;
+        const internalId = String(row[idCol] || '').trim();
+        if (!internalId) return;
+
+        const deptCode  = String(row[deptCol]    || '').trim();
+        const title     = String(row[titleCol]   || '').trim();
+        const tUnits    = row[tUnitsCol] != null ? row[tUnitsCol] : '';
+        const hsUnits   = row[hsUnitsCol] != null ? row[hsUnitsCol] : '';
+        const dateRaw   = row[dateCol];
+
+        // Format date as YYYY-MM-DD
+        let startDate = '';
+        if (dateRaw) {
+          const d = parseCorDate(dateRaw);
+          if (d) {
+            const mm = String(d.getUTCMonth() + 1).padStart(2,'0');
+            const dd = String(d.getUTCDate()).padStart(2,'0');
+            startDate = d.getUTCFullYear() + '-' + mm + '-' + dd;
+          }
+        }
+
+        // Prefix dept code with "1" to match ITS format
+        const transferCourse = deptCode ? '1' + deptCode : '';
+
+        itsRows.push([transferCourse, title, tUnits, hsUnits, internalId, startDate, '', '', '', schoolName, schoolCode]);
+      });
+
+      // Render preview (first 20 rows)
+      document.getElementById('its-preview-info').textContent =
+        itsRows.length + ' rows ready for import' + (itsRows.length > 20 ? ' (showing first 20)' : '');
+      document.getElementById('its-tbody').innerHTML = itsRows.slice(0, 20).map(r =>
+        '<tr>' + r.map(c => '<td>' + esc(String(c)) + '</td>').join('') + '</tr>'
+      ).join('');
+
+      document.getElementById('its-results').style.display = 'block';
+      btn.textContent = 'Re-generate ↵';
+      btn.disabled = false;
+
+    } catch(err) {
+      btn.textContent = 'Error — try again';
+      btn.disabled = false;
+      console.error(err);
+    }
+  });
+
+  document.getElementById('itsExportXlBtn').addEventListener('click', () => {
+    const header = [['TRANSFER COURSE','TITLE','TRANSFER CREDIT','EQUIV CREDIT','EQUIVALENT COURSE','START','END','COMMENTS 1','COMMENTS 2','SCHOOL','CODE']];
+    const ws = XLSX.utils.aoa_to_sheet(header.concat(itsRows));
+    // Column widths
+    ws['!cols'] = [18,40,14,12,16,14,10,14,14,24,10].map(w => ({wch: w}));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, 'ITS_import.xlsx');
   });
 
   // Theme toggle
