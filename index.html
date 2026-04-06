@@ -136,6 +136,10 @@
       border-radius: var(--radius-md); padding: 0.75rem 1rem;
       margin-bottom: 1rem; line-height: 1.9; font-family: sans-serif;
     }
+    .warn-toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; font-weight: bold; }
+    .warn-toggle .warn-chevron { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .warn-toggle.open .warn-chevron { transform: rotate(90deg); }
+    .warn-list { margin-top: 6px; }
 
     .legend { display: flex; gap: 16px; margin-bottom: 0.85rem; flex-wrap: wrap; }
     .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); font-family: sans-serif; }
@@ -164,6 +168,7 @@
     tr.row-partial td:first-child { border-left: 3px solid var(--amber-border); }
     tr.row-none td:first-child    { border-left: 3px solid var(--red-border); }
     tr.row-combo td:first-child   { border-left: 3px solid #378ADD; }
+    tr.row-honors td:first-child  { border-left: 3px solid #7F77DD; }
 
     .multi { display: flex; flex-direction: column; gap: 0; }
     .multi span { display: block; padding: 2px 0; }
@@ -174,7 +179,9 @@
     .badge-partial { background: var(--amber-bg); color: var(--amber-text); }
     .badge-none    { background: var(--red-bg);   color: var(--red-text); }
     .badge-combo   { background: #E6F1FB; color: #0C447C; }
-    [data-theme="dark"] .badge-combo { background: #042C53; color: #B5D4F4; }
+    [data-theme="dark"] .badge-combo  { background: #042C53; color: #B5D4F4; }
+    .badge-honors  { background: #EEEDFE; color: #3C3489; }
+    [data-theme="dark"] .badge-honors { background: #26215C; color: #CECBF6; }
 
     .muted { color: var(--text-secondary); }
 
@@ -205,8 +212,12 @@
     .its-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
     @media (max-width: 500px) { .its-fields { grid-template-columns: 1fr; } }
     .its-field label { display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-family: sans-serif; margin-bottom: 5px; }
+    .its-field label .req { color: var(--red-border); margin-left: 2px; }
     .its-field input { width: 100%; padding: 8px 10px; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); background: var(--bg); color: var(--text); font-family: sans-serif; font-size: 13px; }
     .its-field input:focus { outline: none; border-color: var(--green-border); }
+    .its-field input.field-error { border-color: var(--red-border); background: var(--red-bg); }
+    .field-error-msg { font-size: 11px; color: var(--red-text); font-family: sans-serif; margin-top: 3px; display: none; }
+    .field-error-msg.show { display: block; }
 
     .preview-table-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius-lg); margin-top: 1rem; }
     .preview-info { font-size: 12px; color: var(--text-secondary); font-family: sans-serif; margin-bottom: 0.5rem; }
@@ -282,6 +293,7 @@
         <button class="filter-btn" data-filter="partial">Partial</button>
         <button class="filter-btn" data-filter="none">No match</button>
         <button class="filter-btn" data-filter="combo">Combo / sequence</button>
+        <button class="filter-btn" data-filter="honors">Honors (H)</button>
       </div>
 
       <div class="legend">
@@ -289,6 +301,7 @@
         <div class="legend-item"><div class="legend-dot" style="background:#EF9F27"></div> Partial — one side missing</div>
         <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div> No home school match</div>
         <div class="legend-item"><div class="legend-dot" style="background:#378ADD"></div> Combo / sequence course</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7F77DD"></div> Honors course (dept ends in H)</div>
       </div>
 
       <div class="table-wrap">
@@ -329,12 +342,14 @@
       <div class="card-title">School information</div>
       <div class="its-fields">
         <div class="its-field">
-          <label>Transfer school name</label>
+          <label>Transfer school name <span class="req">*</span></label>
           <input type="text" id="itsSchoolName" placeholder="e.g. Golden West College" />
+          <div class="field-error-msg" id="itsSchoolNameErr">School name is required</div>
         </div>
         <div class="its-field">
-          <label>School code</label>
+          <label>School code <span class="req">*</span></label>
           <input type="text" id="itsSchoolCode" placeholder="e.g. 27614" />
+          <div class="field-error-msg" id="itsSchoolCodeErr">School code is required</div>
         </div>
       </div>
       <div class="card-title" style="margin-top:0.5rem">Upload reviewed CSV / Excel from articulation officer</div>
@@ -636,11 +651,28 @@
         '<div class="stat"><div class="stat-label">No SAC match</div><div class="stat-val red">' + none + '</div></div>';
 
       const warnBox = document.getElementById('warnBox');
-      warnBox.innerHTML = warnings.length
-        ? '<div class="warn-box"><strong>Warnings (' + warnings.length + '):</strong><br>' +
-          warnings.slice(0,15).join('<br>') +
-          (warnings.length > 15 ? '<br>…and ' + (warnings.length - 15) + ' more' : '') + '</div>'
-        : '';
+      if (warnings.length) {
+        const listHtml = warnings.map(w => '<div>' + esc(w) + '</div>').join('');
+        warnBox.innerHTML =
+          '<div class="warn-box">' +
+            '<div class="warn-toggle" id="warnToggle">' +
+              '<span class="warn-chevron">▶</span>' +
+              'Warnings (' + warnings.length + ') — click to expand' +
+            '</div>' +
+            '<div class="warn-list" id="warnList" style="display:none">' + listHtml + '</div>' +
+          '</div>';
+        document.getElementById('warnToggle').addEventListener('click', function() {
+          const list = document.getElementById('warnList');
+          const open = list.style.display !== 'none';
+          list.style.display = open ? 'none' : 'block';
+          this.classList.toggle('open', !open);
+          this.childNodes[1].textContent = !open
+            ? 'Warnings (' + warnings.length + ') — click to collapse'
+            : 'Warnings (' + warnings.length + ') — click to expand';
+        });
+      } else {
+        warnBox.innerHTML = '';
+      }
 
       renderTable(activeFilter);
       document.getElementById('results').style.display = 'block';
@@ -654,13 +686,19 @@
     }
   });
 
+  function isHonors(r) {
+    return !r.isCombo && r.sacMatch && /H$/i.test(r.sacMatch.dept.trim());
+  }
+
   function renderTable(filter) {
     let rows;
-    if (filter === 'all')     rows = allRows;
+    if (filter === 'all')        rows = allRows;
     else if (filter === 'combo') rows = allRows.filter(r => r.isCombo);
+    else if (filter === 'honors') rows = allRows.filter(r => isHonors(r));
     else rows = allRows.filter(r => !r.isCombo && r.status === filter);
 
     document.getElementById('tbody').innerHTML = rows.map(r => {
+      const honors = isHonors(r);
       const sacTitle  = r.sacMatch ? esc(r.sacMatch.title) : '<span class="muted">—</span>';
       const sacDept   = r.sacMatch ? esc(r.sacMatch.dept)  : '<span class="muted">—</span>';
       const sacUnits  = r.sacMatch ? esc(r.sacMatch.units) : '<span class="muted">—</span>';
@@ -668,16 +706,13 @@
       const f3DateStr = r.f3Date   ? fmtDate(r.f3Date)     : '<span class="muted">—</span>';
       const certDisp  = r.certDate ? fmtDate(r.certDate)   : '<span class="muted">—</span>';
       let badge;
-      if (r.isCombo) {
-        badge = '<span class="badge badge-combo">Combo</span>';
-      } else if (r.status === 'full') {
-        badge = '<span class="badge badge-full">Full match</span>';
-      } else if (r.status === 'partial') {
-        badge = '<span class="badge badge-partial">Partial</span>';
-      } else {
-        badge = '<span class="badge badge-none">No match</span>';
-      }
-      return '<tr class="row-' + (r.isCombo ? 'combo' : r.status) + '">' +
+      if (r.isCombo)           badge = '<span class="badge badge-combo">Combo</span>';
+      else if (honors)         badge = '<span class="badge badge-honors">Honors</span>';
+      else if (r.status === 'full')    badge = '<span class="badge badge-full">Full match</span>';
+      else if (r.status === 'partial') badge = '<span class="badge badge-partial">Partial</span>';
+      else                             badge = '<span class="badge badge-none">No match</span>';
+      const rowClass = r.isCombo ? 'combo' : honors ? 'honors' : r.status;
+      return '<tr class="row-' + rowClass + '">' +
         '<td>' + esc(r.cid) + '</td>' +
         '<td>' + esc(r.tName) + '</td>' +
         '<td>' + esc(r.deptRaw) + '</td>' +
@@ -781,11 +816,24 @@
 
   document.getElementById('itsBuildBtn').addEventListener('click', async () => {
     const btn = document.getElementById('itsBuildBtn');
+
+    const schoolName = document.getElementById('itsSchoolName').value.trim();
+    const schoolCode = document.getElementById('itsSchoolCode').value.trim();
+    const nameInput  = document.getElementById('itsSchoolName');
+    const codeInput  = document.getElementById('itsSchoolCode');
+    const nameErr    = document.getElementById('itsSchoolNameErr');
+    const codeErr    = document.getElementById('itsSchoolCodeErr');
+    let hasError = false;
+
+    if (!schoolName) { nameInput.classList.add('field-error'); nameErr.classList.add('show'); hasError = true; }
+    else             { nameInput.classList.remove('field-error'); nameErr.classList.remove('show'); }
+    if (!schoolCode) { codeInput.classList.add('field-error'); codeErr.classList.add('show'); hasError = true; }
+    else             { codeInput.classList.remove('field-error'); codeErr.classList.remove('show'); }
+    if (hasError) return;
+
     btn.disabled = true;
     btn.textContent = 'Processing...';
 
-    const schoolName = document.getElementById('itsSchoolName').value.trim() || '';
-    const schoolCode = document.getElementById('itsSchoolCode').value.trim() || '';
     const file = document.getElementById('f-its').files[0];
     if (!file) { btn.disabled = false; btn.textContent = 'Generate ITS import ↵'; return; }
 
@@ -794,7 +842,6 @@
       if (!rows.length) throw new Error('No rows found');
 
       const s = rows[0];
-      // Map columns from the reviewed output file
       const deptCol    = findCol(s, ['dept code','dept. code','deptcode']);
       const titleCol   = findCol(s, ['transfer course','course','title','local course title']);
       const tUnitsCol  = findCol(s, ['transfer units','transfer credit','units']);
@@ -805,41 +852,40 @@
 
       itsRows = [];
       rows.forEach(row => {
-        // Skip rows that are combos or have no internal ID
         const status = String(row[statusCol] || '').trim().toLowerCase();
         if (status === 'combo' || status === 'none' || status === 'partial') return;
         const internalId = String(row[idCol] || '').trim();
         if (!internalId) return;
 
-        const deptCode  = String(row[deptCol]    || '').trim();
-        const title     = String(row[titleCol]   || '').trim();
-        const tUnits    = row[tUnitsCol] != null ? row[tUnitsCol] : '';
-        const hsUnits   = row[hsUnitsCol] != null ? row[hsUnitsCol] : '';
-        const dateRaw   = row[dateCol];
+        const deptCode = String(row[deptCol]  || '').trim();
+        const title    = String(row[titleCol] || '').trim();
+        const tUnits   = row[tUnitsCol]  != null ? row[tUnitsCol]  : '';
+        const hsUnits  = row[hsUnitsCol] != null ? row[hsUnitsCol] : '';
+        const dateRaw  = row[dateCol];
 
-        // Format date as YYYY-MM-DD
+        // Format date as mm/dd/yyyy
         let startDate = '';
         if (dateRaw) {
           const d = parseCorDate(dateRaw);
           if (d) {
-            const mm = String(d.getUTCMonth() + 1).padStart(2,'0');
-            const dd = String(d.getUTCDate()).padStart(2,'0');
-            startDate = d.getUTCFullYear() + '-' + mm + '-' + dd;
+            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(d.getUTCDate()).padStart(2, '0');
+            startDate = mm + '/' + dd + '/' + d.getUTCFullYear();
           }
         }
 
-        // Prefix dept code with "1" to match ITS format
         const transferCourse = deptCode ? '1' + deptCode : '';
-
         itsRows.push([transferCourse, title, tUnits, hsUnits, internalId, startDate, '', '', '', schoolName, schoolCode]);
       });
 
-      // Render preview (first 20 rows)
       document.getElementById('its-preview-info').textContent =
         itsRows.length + ' rows ready for import' + (itsRows.length > 20 ? ' (showing first 20)' : '');
-      document.getElementById('its-tbody').innerHTML = itsRows.slice(0, 20).map(r =>
-        '<tr>' + r.map(c => '<td>' + esc(String(c)) + '</td>').join('') + '</tr>'
-      ).join('');
+      document.getElementById('its-tbody').innerHTML = itsRows.slice(0, 20).map(r => {
+        const display = [...r];
+        display[9]  = schoolName;
+        display[10] = schoolCode;
+        return '<tr>' + display.map(c => '<td>' + esc(String(c)) + '</td>').join('') + '</tr>';
+      }).join('');
 
       document.getElementById('its-results').style.display = 'block';
       btn.textContent = 'Re-generate ↵';
@@ -853,13 +899,31 @@
   });
 
   document.getElementById('itsExportXlBtn').addEventListener('click', () => {
+    // Re-read school fields at export time in case they were updated after generating
+    const schoolName = document.getElementById('itsSchoolName').value.trim() || '';
+    const schoolCode = document.getElementById('itsSchoolCode').value.trim() || '';
+    const exportRows = itsRows.map(r => {
+      const row = [...r];
+      row[9]  = schoolName;
+      row[10] = schoolCode;
+      return row;
+    });
     const header = [['TRANSFER COURSE','TITLE','TRANSFER CREDIT','EQUIV CREDIT','EQUIVALENT COURSE','START','END','COMMENTS 1','COMMENTS 2','SCHOOL','CODE']];
-    const ws = XLSX.utils.aoa_to_sheet(header.concat(itsRows));
-    // Column widths
+    const ws = XLSX.utils.aoa_to_sheet(header.concat(exportRows));
     ws['!cols'] = [18,40,14,12,16,14,10,14,14,24,10].map(w => ({wch: w}));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
     XLSX.writeFile(wb, 'ITS_import.xlsx');
+  });
+
+  // Clear field errors as user types
+  ['itsSchoolName','itsSchoolCode'].forEach(id => {
+    document.getElementById(id).addEventListener('input', function() {
+      if (this.value.trim()) {
+        this.classList.remove('field-error');
+        document.getElementById(id + 'Err').classList.remove('show');
+      }
+    });
   });
 
   // Theme toggle
