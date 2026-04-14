@@ -320,6 +320,7 @@
               <th style="width:90px">Home cert date</th>
               <th style="width:90px">Final cert date</th>
               <th style="width:75px">Internal ID</th>
+              <th style="width:80px">Course type</th>
               <th style="width:75px">Status</th>
             </tr>
           </thead>
@@ -692,26 +693,37 @@
 
   function renderTable(filter) {
     let rows;
-    if (filter === 'all')        rows = allRows;
-    else if (filter === 'combo') rows = allRows.filter(r => r.isCombo);
+    if (filter === 'all')         rows = allRows;
+    else if (filter === 'combo')  rows = allRows.filter(r => r.isCombo);
     else if (filter === 'honors') rows = allRows.filter(r => isHonors(r));
     else rows = allRows.filter(r => !r.isCombo && r.status === filter);
 
     document.getElementById('tbody').innerHTML = rows.map(r => {
-      const honors = isHonors(r);
+      const honors    = isHonors(r);
       const sacTitle  = r.sacMatch ? esc(r.sacMatch.title) : '<span class="muted">—</span>';
       const sacDept   = r.sacMatch ? esc(r.sacMatch.dept)  : '<span class="muted">—</span>';
       const sacUnits  = r.sacMatch ? esc(r.sacMatch.units) : '<span class="muted">—</span>';
       const f1DateStr = r.f1Date   ? fmtDate(r.f1Date)     : '<span class="muted">—</span>';
       const f3DateStr = r.f3Date   ? fmtDate(r.f3Date)     : '<span class="muted">—</span>';
       const certDisp  = r.certDate ? fmtDate(r.certDate)   : '<span class="muted">—</span>';
-      let badge;
-      if (r.isCombo)           badge = '<span class="badge badge-combo">Combo</span>';
-      else if (honors)         badge = '<span class="badge badge-honors">Honors</span>';
-      else if (r.status === 'full')    badge = '<span class="badge badge-full">Full match</span>';
-      else if (r.status === 'partial') badge = '<span class="badge badge-partial">Partial</span>';
-      else                             badge = '<span class="badge badge-none">No match</span>';
-      const rowClass = r.isCombo ? 'combo' : honors ? 'honors' : r.status;
+
+      // Course type column — independent of match status
+      const courseTypeBadge = r.isCombo
+        ? '<span class="badge badge-combo">Combo</span>'
+        : honors
+        ? '<span class="badge badge-honors">Honors</span>'
+        : '<span style="color:var(--text-secondary);font-size:12px">Regular</span>';
+
+      // Status badge — match quality only
+      let statusBadge;
+      if (r.isCombo)                   statusBadge = '<span class="muted" style="font-size:12px">—</span>';
+      else if (r.status === 'full')    statusBadge = '<span class="badge badge-full">Full match</span>';
+      else if (r.status === 'partial') statusBadge = '<span class="badge badge-partial">Partial</span>';
+      else                             statusBadge = '<span class="badge badge-none">No match</span>';
+
+      // Row color driven by match status; honors rows keep their match color
+      const rowClass = r.isCombo ? 'combo' : r.status;
+
       return '<tr class="row-' + rowClass + '">' +
         '<td>' + esc(r.cid) + '</td>' +
         '<td>' + esc(r.tName) + '</td>' +
@@ -725,7 +737,8 @@
         '<td>' + f3DateStr + '</td>' +
         '<td>' + certDisp + '</td>' +
         '<td>' + esc(r.internalId || '') + '</td>' +
-        '<td>' + badge + '</td>' +
+        '<td>' + courseTypeBadge + '</td>' +
+        '<td>' + statusBadge + '</td>' +
         '</tr>';
     }).join('');
   }
@@ -744,8 +757,11 @@
   });
 
   function buildExportRows() {
-    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Cert Date','Home School Course','Home Dept Code','Home School Units','Home Cert Date','Final Cert Date','Internal ID','Status']];
+    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Cert Date','Home School Course','Home Dept Code','Home School Units','Home Cert Date','Final Cert Date','Internal ID','Course Type','Status']];
     allRows.forEach(r => {
+      const honors = isHonors(r);
+      const courseType = r.isCombo ? 'Combo' : honors ? 'Honors' : 'Regular';
+      const status     = r.isCombo ? '' : r.status;
       out.push([
         r.cid, r.tName, r.deptRaw, r.tUnits, r.corTermRaw,
         r.f1Date   ? fmtDate(r.f1Date)   : '',
@@ -755,7 +771,8 @@
         r.f3Date   ? fmtDate(r.f3Date)   : '',
         r.certDate ? fmtDate(r.certDate) : '',
         r.internalId || '',
-        r.isCombo ? 'combo' : r.status
+        courseType,
+        status
       ]);
     });
     return out;
@@ -926,15 +943,13 @@
     });
   });
 
-  // Theme toggle
+  // Theme toggle — always starts in light mode
   (function() {
     const btn = document.getElementById('themeBtn');
     const root = document.documentElement;
-    // Initialise from system preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    let dark = prefersDark;
-    if (dark) root.setAttribute('data-theme', 'dark');
-    btn.textContent = dark ? '☀ Light mode' : '☽ Dark mode';
+    let dark = false;
+    root.setAttribute('data-theme', 'light');
+    btn.textContent = '☽ Dark mode';
     btn.addEventListener('click', () => {
       dark = !dark;
       root.setAttribute('data-theme', dark ? 'dark' : 'light');
