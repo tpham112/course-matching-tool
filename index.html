@@ -262,7 +262,7 @@
         <div class="dz-icon">📋</div>
         <div class="dz-num">File 2 — Transfer Units</div>
         <div class="dz-label">Transfer school course codes + units</div>
-        <div class="dz-hint">Raw TES scrape — any extra columns ignored;<br>keeps course_code, course_title, units</div>
+        <div class="dz-hint">course_code, course_title, units</div>
         <div class="dz-filename" id="dz2-name"></div>
       </label>
 
@@ -506,19 +506,6 @@
     return a >= b ? a : b;
   }
 
-  // Extract the minimum unit value from a range like "0.5-2", "3-4", or plain "3"
-  function parseMinUnits(raw) {
-    const s = String(raw || '').trim();
-    if (!s) return '';
-    // Range: take everything before the dash
-    const rangeParts = s.split('-');
-    const candidate = rangeParts[0].trim();
-    const num = parseFloat(candidate);
-    if (isNaN(num)) return s; // return as-is if unparseable
-    // Return as integer if whole number, otherwise keep decimal
-    return num % 1 === 0 ? String(Math.floor(num)) : String(num);
-  }
-
   function handleFile(file, i) {
     if (!file) return;
     files[i] = file;
@@ -582,9 +569,9 @@
       const deptCol1    = findCol(s1, ['local dept. name','local dept name','local dept','dept. name','dept name']);
       const corTermCol1 = findCol(s1, ['cor effective term','effective term','cor term']);
 
-      // File 2 columns — handles raw TES scrape (extra columns ignored; only needs course_code + units)
-      const codeCol2 = findCol(s2, ['course_code','course code','code','course id','courseid','course #']);
-      const unitCol2 = findCol(s2, ['units','unit','credit','credits','hours']);
+      // File 2 columns
+      const codeCol2 = findCol(s2, ['course_code','course code','code']);
+      const unitCol2 = findCol(s2, ['units','unit','credit']);
 
       // File 3 columns
       const cidCol3  = findCol(s3, ['c-id #','c-id#','cid #','cid#','c-id','cid']);
@@ -594,11 +581,11 @@
       const corDateCol3 = findCol(s3, ['cor effective date','effective date','cor date']);
       const internalIdCol3 = findCol(s3, ['internalid','internal id','internal_id']);
 
-      // Build File 2 map: norm(course_code) -> min units (handles ranges like "0.5-2" → "0.5", "3-4" → "3")
+      // Build File 2 map: norm(course_code) -> units
       const f2Map = {};
       r2.forEach(row => {
         const code = norm(row[codeCol2]);
-        if (code) f2Map[code] = parseMinUnits(row[unitCol2]);
+        if (code) f2Map[code] = String(row[unitCol2] || '').trim();
       });
 
       // Build File 3 map: norm(cid) -> [{title, dept, units}]
