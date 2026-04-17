@@ -262,7 +262,7 @@
         <div class="dz-icon">📋</div>
         <div class="dz-num">File 2 — Transfer Units</div>
         <div class="dz-label">Transfer school course codes + units</div>
-        <div class="dz-hint">course_code, course_title, units</div>
+        <div class="dz-hint">course_code, course_title, units<br><em>Also accepts raw web scrapes — auto-cleaned</em></div>
         <div class="dz-filename" id="dz2-name"></div>
       </label>
 
@@ -569,9 +569,33 @@
       const deptCol1    = findCol(s1, ['local dept. name','local dept name','local dept','dept. name','dept name']);
       const corTermCol1 = findCol(s1, ['cor effective term','effective term','cor term']);
 
+      // File 2 — auto-clean raw web scrape if needed
+      // Raw scrape has: web_scraper_order, web_scraper_start_url, course_code, data, course_title, units
+      // Clean format has: course_code, course_title, units
+      // Detection: if a row has 'web_scraper_order' or 'web_scraper_start_url' key, it's a raw scrape.
+      const isRawScrape = s2 && Object.keys(s2).some(k =>
+        norm(k).includes('web_scraper') || norm(k) === 'data'
+      );
+      let r2clean = r2;
+      if (isRawScrape) {
+        // Find the real course_code and units columns from the raw format
+        const rawCodeCol  = findCol(s2, ['course_code','course code','code']);
+        const rawUnitCol  = findCol(s2, ['units','unit','credit']);
+        const rawTitleCol = findCol(s2, ['course_title','course title','title']);
+        // Keep only rows that have a non-empty course_code (skip category headers & blank rows)
+        r2clean = r2
+          .filter(row => String(row[rawCodeCol] || '').trim() !== '')
+          .map(row => ({
+            course_code:  String(row[rawCodeCol]  || '').trim(),
+            course_title: String(row[rawTitleCol] || '').trim(),
+            units:        row[rawUnitCol] != null ? row[rawUnitCol] : ''
+          }));
+      }
+
       // File 2 columns
-      const codeCol2 = findCol(s2, ['course_code','course code','code']);
-      const unitCol2 = findCol(s2, ['units','unit','credit']);
+      const s2clean  = r2clean[0] || s2;
+      const codeCol2 = findCol(s2clean, ['course_code','course code','code']);
+      const unitCol2 = findCol(s2clean, ['units','unit','credit']);
 
       // File 3 columns
       const cidCol3  = findCol(s3, ['c-id #','c-id#','cid #','cid#','c-id','cid']);
@@ -583,7 +607,7 @@
 
       // Build File 2 map: norm(course_code) -> units
       const f2Map = {};
-      r2.forEach(row => {
+      r2clean.forEach(row => {
         const code = norm(row[codeCol2]);
         if (code) f2Map[code] = String(row[unitCol2] || '').trim();
       });
