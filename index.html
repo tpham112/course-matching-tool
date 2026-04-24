@@ -650,7 +650,24 @@
           : '';
         if (!tUnits) warnings.push('No unit match for dept code "' + deptRaw + '"');
 
-        const sacMatches = f3Map[norm(cid)] || [];
+        // Determine if the transfer course is an honors course (dept code ends in H)
+        const transferIsHonors = /H$/i.test(deptRaw.trim());
+
+        const allF3Matches = f3Map[norm(cid)] || [];
+
+        // Partition home school matches into honors (dept ends in H) and regular
+        const honorF3Matches   = allF3Matches.filter(m => /H$/i.test(m.dept.trim()));
+        const regularF3Matches = allF3Matches.filter(m => !/H$/i.test(m.dept.trim()));
+
+        // Apply matching rules:
+        //   Transfer regular → home school regular only
+        //   Transfer honors  → home school honors; fall back to regular if no honors exist
+        let sacMatches;
+        if (transferIsHonors) {
+          sacMatches = honorF3Matches.length > 0 ? honorF3Matches : regularF3Matches;
+        } else {
+          sacMatches = regularF3Matches;
+        }
 
         if (sacMatches.length > 0) {
           sacMatches.forEach(m => {
@@ -712,7 +729,8 @@
   });
 
   function isHonors(r) {
-    return !r.isCombo && r.sacMatch && /H$/i.test(r.sacMatch.dept.trim());
+    // An honors row is one where the transfer dept code ends in H
+    return !r.isCombo && /H$/i.test(r.deptRaw.trim());
   }
 
   function renderTable(filter) {
