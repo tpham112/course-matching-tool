@@ -155,7 +155,7 @@
 
     .table-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius-lg); }
 
-    table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-family: sans-serif; min-width: 820px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-family: sans-serif; min-width: 960px; }
     th {
       background: var(--bg-secondary); padding: 9px 11px; text-align: left;
       font-weight: bold; font-size: 10.5px; color: var(--text-secondary);
@@ -299,6 +299,7 @@
         <table>
           <thead>
             <tr>
+              <th style="width:130px">Transfer school</th>
               <th style="width:80px">C-ID</th>
               <th style="width:130px">Transfer course</th>
               <th style="width:90px">Dept. code</th>
@@ -548,6 +549,7 @@
       // Supports both the new master format (cid_number, course_num, course_name, course_units, ...)
       // and the legacy transfer CID format (C-ID #, Local Course Title, Local Dept. Name & Number)
       const cidCol1      = findCol(s1, ['cid_number','c-id #','c-id#','cid #','cid#','c-id','cid']);
+      const schoolCol1   = findCol(s1, ['school_name','school name','school','institution']);
       const nameCol1     = findCol(s1, ['course_name','local course title','course title','local course']);
       const deptCol1     = findCol(s1, ['course_num','local dept. name','local dept name','local dept','dept. name','dept name']);
       const unitCol1     = findCol(s1, ['course_units','units','unit','credit']);
@@ -581,9 +583,10 @@
       allRows = [];
 
       r1.forEach(row => {
-        const cid     = String(row[cidCol1]  || '').trim();
-        const tName   = String(row[nameCol1] || '').trim();
-        const deptRaw = String(row[deptCol1] || '').trim();
+        const cid        = String(row[cidCol1]     || '').trim();
+        const schoolName = String(row[schoolCol1]  || '').trim();
+        const tName      = String(row[nameCol1]    || '').trim();
+        const deptRaw    = String(row[deptCol1]    || '').trim();
         if (!cid && !tName) return;
 
         const isCombo = deptRaw.includes('+');
@@ -598,7 +601,7 @@
           : '';
 
         if (isCombo) {
-          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status: 'none', isCombo: true });
+          allRows.push({ cid, schoolName, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status: 'none', isCombo: true });
           return;
         }
 
@@ -625,11 +628,11 @@
             const f3Date = parseCorDate(m.corDateRaw);
             const certDate = maxDate(f1Date, f3Date);
             const status = tUnits ? 'full' : 'partial';
-            allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, f3Date, certDate, status, isCombo: false, internalId: m.internalId });
+            allRows.push({ cid, schoolName, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: m, f3Date, certDate, status, isCombo: false, internalId: m.internalId });
           });
         } else {
           const status = tUnits ? 'partial' : 'none';
-          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status, isCombo: false, internalId: '' });
+          allRows.push({ cid, schoolName, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status, isCombo: false, internalId: '' });
         }
       });
 
@@ -718,6 +721,7 @@
       const rowClass = r.isCombo ? 'combo' : r.status;
 
       return '<tr class="row-' + rowClass + '">' +
+        '<td>' + esc(r.schoolName || '') + '</td>' +
         '<td>' + esc(r.cid) + '</td>' +
         '<td>' + esc(r.tName) + '</td>' +
         '<td>' + esc(r.deptRaw) + '</td>' +
@@ -750,12 +754,13 @@
   });
 
   function buildExportRows() {
-    const out = [['C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Cert Date','Home School Course','Home Dept Code','Home School Units','Home Cert Date','Final Cert Date','Internal ID','Course Type','Status']];
+    const out = [['Transfer School','C-ID','Transfer Course','Dept Code','Transfer Units','Transfer COR Term','Transfer Cert Date','Home School Course','Home Dept Code','Home School Units','Home Cert Date','Final Cert Date','Internal ID','Course Type','Status']];
     allRows.forEach(r => {
       const honors = isHonors(r);
       const courseType = r.isCombo ? 'Combo' : honors ? 'Honors' : 'Regular';
       const status     = r.isCombo ? '' : r.status;
       out.push([
+        r.schoolName || '',
         r.cid, r.tName, r.deptRaw, r.tUnits, r.corTermRaw,
         r.f1Date   ? fmtDate(r.f1Date)   : '',
         r.sacMatch ? r.sacMatch.title     : '',
