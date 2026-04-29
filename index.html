@@ -82,7 +82,7 @@
       margin-bottom: 1rem; font-family: sans-serif;
     }
 
-    .upload-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .upload-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     @media (max-width: 620px) { .upload-grid { grid-template-columns: 1fr; } }
 
     .drop-zone {
@@ -230,7 +230,7 @@
     <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
       <div>
         <h1>Transfer Course Matching</h1>
-        <p>Match transfer school CID &amp; course codes against home school equivalents</p>
+        <p>Match transfer school CID &amp; course codes against home school equivalents — units sourced from Master CID List</p>
       </div>
       <button class="theme-btn" id="themeBtn">☽ Dark mode</button>
     </div>
@@ -251,25 +251,16 @@
       <label class="drop-zone" id="dz1">
         <input type="file" id="f1" accept=".csv,.xlsx,.xls">
         <div class="dz-icon">📋</div>
-        <div class="dz-num">File 1 — Transfer CID</div>
-        <div class="dz-label">Transfer school CID + course titles</div>
-        <div class="dz-hint">C-ID #, Local Course Title(s),<br>Local Dept. Name &amp; Number</div>
+        <div class="dz-num">File 1 — Master CID List</div>
+        <div class="dz-label">Transfer school CID + course titles + units</div>
+        <div class="dz-hint">cid_number, school_name, course_num,<br>course_name, course_units, effective_term, cor_effective_date</div>
         <div class="dz-filename" id="dz1-name"></div>
-      </label>
-
-      <label class="drop-zone" id="dz2">
-        <input type="file" id="f2" accept=".csv,.xlsx,.xls">
-        <div class="dz-icon">📋</div>
-        <div class="dz-num">File 2 — Transfer Units</div>
-        <div class="dz-label">Transfer school course codes + units</div>
-        <div class="dz-hint">course_code, course_title, units<br><em>Also accepts raw web scrapes — auto-cleaned</em></div>
-        <div class="dz-filename" id="dz2-name"></div>
       </label>
 
       <label class="drop-zone" id="dz3">
         <input type="file" id="f3" accept=".csv,.xlsx,.xls">
         <div class="dz-icon">🏫</div>
-        <div class="dz-num">File 3 — Home School Courses</div>
+        <div class="dz-num">File 2 — Home School Courses</div>
         <div class="dz-label">Home school CID + course names + units</div>
         <div class="dz-hint">C-ID #, Local Course Title(s),<br>Local Dept. Name &amp; Number, MIN_UNITS</div>
         <div class="dz-filename" id="dz3-name"></div>
@@ -278,7 +269,7 @@
     </div>
   </div>
 
-  <button class="run-btn" id="runBtn" disabled>Upload all 3 files to run matching</button>
+  <button class="run-btn" id="runBtn" disabled>Upload all 2 files to run matching</button>
 
   <div id="results">
     <div class="stats" id="statsRow"></div>
@@ -398,7 +389,8 @@
 
 </div>
 <script>
-  let files = [null, null, null];
+  // files[0] = Master CID list (File 1), files[1] = Home School (File 3 slot)
+  let files = [null, null];
   let allRows = [];
   let activeFilter = 'all';
 
@@ -437,7 +429,6 @@
   }
 
   // Convert "Fall 2022" / "Spring 2019" etc. to a Date object (UTC, no timezone shift)
-  // Spring = 1/1/yyyy, Summer = 6/1/yyyy, Fall/Autumn = 8/1/yyyy
   function termToDate(raw) {
     if (!raw) return null;
     const s = String(raw).trim();
@@ -447,37 +438,31 @@
     const yr = parseInt(parts[parts.length - 1], 10);
     if (isNaN(yr)) return null;
     let mo;
-    if (term === 'spring')                         mo = 1;  // Jan 1
-    else if (term === 'summer')                    mo = 6;  // Jun 1
-    else if (term === 'fall' || term === 'autumn') mo = 8;  // Aug 1
+    if (term === 'spring')                         mo = 1;
+    else if (term === 'summer')                    mo = 6;
+    else if (term === 'fall' || term === 'autumn') mo = 8;
     else return null;
-    // Use Date.UTC so there is zero timezone offset
     return new Date(Date.UTC(yr, mo - 1, 1));
   }
 
-  // Parse a date value from File 3's COR effective date column.
-  // XLSX with raw:true gives date cells as Excel serial numbers (integers).
-  // String values like "8/1/2013" are also handled.
-  // All results are returned as UTC midnight to avoid timezone shifts.
+  // Parse a date value — handles Excel serial numbers and string dates
   function parseCorDate(val) {
     if (val === null || val === undefined || val === '') return null;
+    // Already a JS Date object (openpyxl-style; xlsx.js passes these through)
+    if (val instanceof Date) {
+      if (isNaN(val)) return null;
+      return new Date(Date.UTC(val.getFullYear(), val.getMonth(), val.getDate()));
+    }
     const v = String(val).trim();
     if (!v) return null;
-
-    // Excel serial number (pure integer)
+    // Excel serial number
     if (/^\d+(\.\d+)?$/.test(v)) {
       const serial = parseFloat(v);
-      // Excel serial: days since Jan 0 1900 (with leap-year bug)
-      // Subtract 25569 to get days since Unix epoch, multiply by ms per day
       const ms = Math.round((serial - 25569) * 86400 * 1000);
       const d = new Date(ms);
       if (isNaN(d)) return null;
-      // Re-express as UTC midnight on that calendar date
       return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     }
-
-    // String date — parse and re-express as UTC midnight
-    // Handle M/D/YYYY and YYYY-MM-DD
     let m;
     if ((m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) {
       return new Date(Date.UTC(+m[3], +m[1] - 1, +m[2]));
@@ -485,12 +470,10 @@
     if ((m = v.match(/^(\d{4})-(\d{2})-(\d{2})/))) {
       return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
     }
-    // Fallback
     const d = new Date(v);
     return isNaN(d) ? null : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   }
 
-  // Format a date using UTC getters so the display matches the stored UTC date
   function fmtDate(dt) {
     if (!dt || isNaN(dt)) return '';
     const mm   = String(dt.getUTCMonth() + 1).padStart(2, '0');
@@ -509,10 +492,13 @@
   function handleFile(file, i) {
     if (!file) return;
     files[i] = file;
-    const dz = document.getElementById('dz' + (i+1));
+    // dz1 maps to index 0, dz3 maps to index 1
+    const dzId = i === 0 ? 'dz1' : 'dz3';
+    const nameId = i === 0 ? 'dz1-name' : 'dz3-name';
+    const dz = document.getElementById(dzId);
     dz.classList.add('loaded');
     dz.classList.remove('drag-over');
-    document.getElementById('dz' + (i+1) + '-name').textContent = file.name;
+    document.getElementById(nameId).textContent = file.name;
     if (files.every(f => f)) {
       const btn = document.getElementById('runBtn');
       btn.disabled = false;
@@ -521,34 +507,30 @@
     }
   }
 
-  ['f1','f2','f3'].forEach((id, i) => {
-    // Click-to-browse
-    document.getElementById(id).addEventListener('change', (e) => {
-      handleFile(e.target.files[0], i);
-    });
+  // File 1 (master CID list)
+  document.getElementById('f1').addEventListener('change', (e) => {
+    handleFile(e.target.files[0], 0);
+  });
+  const dz1 = document.getElementById('dz1');
+  dz1.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dz1.classList.add('drag-over'); });
+  dz1.addEventListener('dragleave', (e) => { if (!dz1.contains(e.relatedTarget)) dz1.classList.remove('drag-over'); });
+  dz1.addEventListener('drop', (e) => {
+    e.preventDefault(); dz1.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) { handleFile(file, 0); const dt = new DataTransfer(); dt.items.add(file); document.getElementById('f1').files = dt.files; }
+  });
 
-    // Drag and drop
-    const dz = document.getElementById('dz' + (i+1));
-    dz.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-      dz.classList.add('drag-over');
-    });
-    dz.addEventListener('dragleave', (e) => {
-      if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
-    });
-    dz.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dz.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        handleFile(file, i);
-        // Also update the hidden input so change-based logic stays in sync
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        document.getElementById(id).files = dt.files;
-      }
-    });
+  // File 3 (home school) — index 1
+  document.getElementById('f3').addEventListener('change', (e) => {
+    handleFile(e.target.files[0], 1);
+  });
+  const dz3 = document.getElementById('dz3');
+  dz3.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dz3.classList.add('drag-over'); });
+  dz3.addEventListener('dragleave', (e) => { if (!dz3.contains(e.relatedTarget)) dz3.classList.remove('drag-over'); });
+  dz3.addEventListener('drop', (e) => {
+    e.preventDefault(); dz3.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) { handleFile(file, 1); const dt = new DataTransfer(); dt.items.add(file); document.getElementById('f3').files = dt.files; }
   });
 
   document.getElementById('runBtn').addEventListener('click', async () => {
@@ -556,63 +538,31 @@
     btn.disabled = true;
     btn.textContent = 'Processing...';
     try {
-      const [r1, r2, r3] = await Promise.all(files.map(parseFile));
+      const [r1, r3] = await Promise.all(files.map(parseFile));
 
       // Detect columns from first non-empty row
       const s1 = r1.find(r => Object.values(r).some(v => String(v).trim()));
-      const s2 = r2.find(r => Object.values(r).some(v => String(v).trim()));
       const s3 = r3.find(r => Object.values(r).some(v => String(v).trim()));
 
-      // File 1 columns
-      const cidCol1     = findCol(s1, ['c-id #','c-id#','cid #','cid#','c-id','cid']);
-      const nameCol1    = findCol(s1, ['local course title','course title','local course']);
-      const deptCol1    = findCol(s1, ['local dept. name','local dept name','local dept','dept. name','dept name']);
-      const corTermCol1 = findCol(s1, ['cor effective term','effective term','cor term']);
+      // Master CID list columns (File 1)
+      // Supports both the new master format (cid_number, course_num, course_name, course_units, ...)
+      // and the legacy transfer CID format (C-ID #, Local Course Title, Local Dept. Name & Number)
+      const cidCol1      = findCol(s1, ['cid_number','c-id #','c-id#','cid #','cid#','c-id','cid']);
+      const nameCol1     = findCol(s1, ['course_name','local course title','course title','local course']);
+      const deptCol1     = findCol(s1, ['course_num','local dept. name','local dept name','local dept','dept. name','dept name']);
+      const unitCol1     = findCol(s1, ['course_units','units','unit','credit']);
+      const corTermCol1  = findCol(s1, ['effective_term','cor effective term','effective term','cor term']);
+      const corDateCol1  = findCol(s1, ['cor_effective_date','cor effective date','effective date','cor date']);
 
-      // File 2 — auto-clean raw web scrape if needed
-      // Raw scrape has: web_scraper_order, web_scraper_start_url, course_code, data, course_title, units
-      // Clean format has: course_code, course_title, units
-      // Detection: if a row has 'web_scraper_order' or 'web_scraper_start_url' key, it's a raw scrape.
-      const isRawScrape = s2 && Object.keys(s2).some(k =>
-        norm(k).includes('web_scraper') || norm(k) === 'data'
-      );
-      let r2clean = r2;
-      if (isRawScrape) {
-        // Find the real course_code and units columns from the raw format
-        const rawCodeCol  = findCol(s2, ['course_code','course code','code']);
-        const rawUnitCol  = findCol(s2, ['units','unit','credit']);
-        const rawTitleCol = findCol(s2, ['course_title','course title','title']);
-        // Keep only rows that have a non-empty course_code (skip category headers & blank rows)
-        r2clean = r2
-          .filter(row => String(row[rawCodeCol] || '').trim() !== '')
-          .map(row => ({
-            course_code:  String(row[rawCodeCol]  || '').trim(),
-            course_title: String(row[rawTitleCol] || '').trim(),
-            units:        row[rawUnitCol] != null ? row[rawUnitCol] : ''
-          }));
-      }
-
-      // File 2 columns
-      const s2clean  = r2clean[0] || s2;
-      const codeCol2 = findCol(s2clean, ['course_code','course code','code']);
-      const unitCol2 = findCol(s2clean, ['units','unit','credit']);
-
-      // File 3 columns
-      const cidCol3  = findCol(s3, ['c-id #','c-id#','cid #','cid#','c-id','cid']);
-      const nameCol3 = findCol(s3, ['local course title','course title','local course']);
-      const deptCol3 = findCol(s3, ['local dept. name','local dept name','local dept','dept. name','dept name']);
-      const unitCol3    = findCol(s3, ['min_units','min units','units','unit','credit']);
-      const corDateCol3 = findCol(s3, ['cor effective date','effective date','cor date']);
+      // File 3 (Home School) columns
+      const cidCol3        = findCol(s3, ['c-id #','c-id#','cid #','cid#','c-id','cid']);
+      const nameCol3       = findCol(s3, ['local course title','course title','local course']);
+      const deptCol3       = findCol(s3, ['local dept. name','local dept name','local dept','dept. name','dept name']);
+      const unitCol3       = findCol(s3, ['min_units','min units','units','unit','credit']);
+      const corDateCol3    = findCol(s3, ['cor effective date','effective date','cor date']);
       const internalIdCol3 = findCol(s3, ['internalid','internal id','internal_id']);
 
-      // Build File 2 map: norm(course_code) -> units
-      const f2Map = {};
-      r2clean.forEach(row => {
-        const code = norm(row[codeCol2]);
-        if (code) f2Map[code] = String(row[unitCol2] || '').trim();
-      });
-
-      // Build File 3 map: norm(cid) -> [{title, dept, units}]
+      // Build File 3 map: norm(cid) -> [{title, dept, units, corDateRaw, internalId}]
       const f3Map = {};
       r3.forEach(row => {
         const cid = norm(row[cidCol3]);
@@ -638,30 +588,31 @@
 
         const isCombo = deptRaw.includes('+');
         const corTermRaw = String(row[corTermCol1] || '').trim();
-        const f1Date = termToDate(corTermRaw);
+        // Use the explicit cor_effective_date from the master list if present, else derive from term
+        const corDateRaw = row[corDateCol1] != null ? row[corDateCol1] : '';
+        const f1Date = corDateRaw ? parseCorDate(corDateRaw) : termToDate(corTermRaw);
+
+        // Units come directly from the master CID list
+        const tUnits = unitCol1 && row[unitCol1] != null && String(row[unitCol1]).trim() !== ''
+          ? String(row[unitCol1]).trim()
+          : '';
 
         if (isCombo) {
-          allRows.push({ cid, tName, deptRaw, tUnits: '', corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status: 'none', isCombo: true });
+          allRows.push({ cid, tName, deptRaw, tUnits, corTermRaw, f1Date, sacMatch: null, f3Date: null, certDate: f1Date, status: 'none', isCombo: true });
           return;
         }
 
-        const tUnits = f2Map[norm(deptRaw)] !== undefined
-          ? String(f2Map[norm(deptRaw)])
-          : '';
-        if (!tUnits) warnings.push('No unit match for dept code "' + deptRaw + '"');
+        if (!tUnits) warnings.push('No units found for course "' + deptRaw + '" (CID: ' + cid + ')');
 
         // Determine if the transfer course is an honors course (dept code ends in H)
         const transferIsHonors = /H$/i.test(deptRaw.trim());
 
         const allF3Matches = f3Map[norm(cid)] || [];
 
-        // Partition home school matches into honors (dept ends in H) and regular
+        // Partition home school matches into honors and regular
         const honorF3Matches   = allF3Matches.filter(m => /H$/i.test(m.dept.trim()));
         const regularF3Matches = allF3Matches.filter(m => !/H$/i.test(m.dept.trim()));
 
-        // Apply matching rules:
-        //   Transfer regular → home school regular only
-        //   Transfer honors  → home school honors; fall back to regular if no honors exist
         let sacMatches;
         if (transferIsHonors) {
           sacMatches = honorF3Matches.length > 0 ? honorF3Matches : regularF3Matches;
